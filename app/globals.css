@@ -8,8 +8,9 @@
 @theme inline {
   --color-background: var(--background);
   --color-foreground: var(--foreground);
-  --font-sans: var(--font-geist-sans);
+  --font-sans: var(--font-manrope);
   --font-mono: var(--font-geist-mono);
+  --font-headline: var(--font-manrope);
 }
 
 @media (prefers-color-scheme: dark) {
@@ -19,8 +20,53 @@
   }
 }
 
+/* Text / Font – Best Practice */
+html {
+  font-size: 16px;
+  -webkit-text-size-adjust: 100%;
+  text-size-adjust: 100%;
+}
+
 body {
   background: var(--background);
   color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+  font-family: var(--font-manrope), sans-serif;
+  font-size: 1rem;
+  line-height: 1.6;
+  letter-spacing: 0;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  text-rendering: optimizeLegibility;
+  word-wrap: break-word;
+  overflow-wrap: break-word;
+}
+
+/* Keine Umrandungen bei Klick (Mouse); Fokus nur bei Tastatur für Barrierefreiheit */
+*:focus {
+  outline: none;
+}
+
+*:focus:not(:focus-visible) {
+  outline: none;
+  box-shadow: none;
+}
+
+*:focus-visible {
+  outline: 2px solid currentColor;
+  outline-offset: 2px;
+}
+
+/* Kein Skalierungs-/Einblend-Effekt bei Bildern – verhindert „von Mitte größer werden“ */
+img {
+  transition: none !important;
+}
+
+/* Review-Section: Lade-Rahmen (pathLength=1) um Avatar – 3 s bis zum Wechsel */
+@keyframes review-rect-fill {
+  from {
+    stroke-dashoffset: 1;
+  }
+  to {
+    stroke-dashoffset: 0;
+  }
 }
