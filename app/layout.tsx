@@ -1,4 +1,5 @@
 import type { Metadata, Viewport } from "next";
+import { Suspense } from "react";
 import { Geist_Mono, Manrope } from "next/font/google";
 import SmoothScrollShell from "./components/SmoothScrollShell";
 import SiteFooter from "./components/SiteFooter";
@@ -58,10 +59,12 @@ export default function RootLayout({
         className={`${geistMono.variable} ${manrope.variable} ${manrope.className} antialiased`}
       >
         <SmootherProvider>
-          <SmoothScrollShell>
-            {children}
-            <SiteFooter />
-          </SmoothScrollShell>
+          <Suspense fallback={null}>
+            <SmoothScrollShell>
+              {children}
+              <SiteFooter />
+            </SmoothScrollShell>
+          </Suspense>
         </SmootherProvider>
       </body>
     </html>
