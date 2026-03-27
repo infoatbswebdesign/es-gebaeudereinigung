@@ -1,10 +1,8 @@
-const SECTION_BG = "#ffffff";
-
 export default function UeberUnsSection() {
   return (
     <section
-      className="py-12 px-6 md:py-16 md:px-12"
-      style={{ backgroundColor: SECTION_BG }}
+      id="ueber-uns"
+      className="bg-white py-12 px-6 md:py-16 md:px-12"
       aria-labelledby="ueber-uns-heading"
     >
       <div className="flex flex-col gap-10 md:flex-row md:items-center md:justify-between md:gap-12">
@@ -19,15 +17,17 @@ export default function UeberUnsSection() {
           Qualität, Sorgfalt und Kundenzufriedenheit.
         </p>
         {/* Rechte Spalte: Region + Leistungsversprechen */}
-        <p className="max-w-md text-base leading-relaxed text-slate-700 md:text-lg">
-          Im{" "}
-          <span className="font-medium text-sky-700">
-            Großraum Stuttgart, Esslingen und Umgebung
-          </span>{" "}
-          bieten wir unseren Auftraggebern zuverlässige und professionelle
-          Reinigungslösungen – flexibel, gründlich und termingerecht. Wir freuen
-          uns darauf, Sie zu unterstützen.
-        </p>
+        <div className="flex max-w-md flex-col gap-6">
+          <p className="text-base leading-relaxed text-slate-700 md:text-lg">
+            Im{" "}
+            <span className="font-medium text-sky-700">
+              Großraum Stuttgart, Esslingen und Umgebung
+            </span>{" "}
+            bieten wir unseren Auftraggebern zuverlässige und professionelle
+            Reinigungslösungen – flexibel, gründlich und termingerecht. Wir freuen
+            uns darauf, Sie zu unterstützen.
+          </p>
+        </div>
       </div>
     </section>
   );

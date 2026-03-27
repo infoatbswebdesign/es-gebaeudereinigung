@@ -1,5 +1,6 @@
 import Link from "next/link";
 import HeroArrowLink from "./HeroArrowLink";
+import ScrollToContactButton from "./ScrollToContactButton";
 
 const HERO_VIDEO_SRC = "/es-gebaeudereinigung-hero-section-video.mp4";
 
@@ -86,12 +87,9 @@ export default function Hero() {
                 Perfektion in jedem Quadratmeter.
               </h1>
               <p className="mt-6">
-                <Link
-                  href="/kontakt"
-                  className="inline-flex items-center justify-center rounded-full border-2 border-white bg-transparent px-6 py-3.5 text-base font-semibold text-white transition hover:bg-white hover:text-[#7596AE] focus:outline-none focus:ring-2 focus:ring-white/50 focus:ring-offset-2 focus:ring-offset-[#7596AE]"
-                >
+                <ScrollToContactButton className="inline-flex items-center justify-center rounded-full border-2 border-white bg-transparent px-6 py-3.5 text-base font-semibold text-white transition hover:bg-white hover:text-[#7596AE] focus:outline-none focus:ring-2 focus:ring-white/50 focus:ring-offset-2 focus:ring-offset-[#7596AE]">
                   Angebot anfragen
-                </Link>
+                </ScrollToContactButton>
               </p>
             </div>
 

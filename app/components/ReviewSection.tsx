@@ -1,11 +1,12 @@
 "use client";
 
 import Image from "next/image";
-import { useEffect, useState } from "react";
+import { useRef, useState } from "react";
+import gsap from "gsap";
+import { useGSAP } from "@gsap/react";
+import { DrawSVGPlugin } from "gsap/DrawSVGPlugin";
 
-const SECTION_BG = "#ffffff";
-const REVIEW_BOX_BG = "#F1F0EC";
-const AUTOPLAY_MS = 3000;
+const AUTOPLAY_MS = 4000;
 
 const TESTIMONIALS = [
   {
@@ -35,7 +36,13 @@ const TESTIMONIALS = [
 const RECT_PATH =
   "M 14 2 L 66 2 Q 78 2 78 14 L 78 66 Q 78 78 66 78 L 14 78 Q 2 78 2 66 L 2 14 Q 2 2 14 2 Z";
 
-function AvatarLoadFrame({ active }: { active: boolean }) {
+gsap.registerPlugin(useGSAP, DrawSVGPlugin);
+
+function AvatarLoadFrame({
+  pathRef,
+}: {
+  pathRef: (node: SVGPathElement | null) => void;
+}) {
   return (
     <svg
       className="pointer-events-none absolute inset-0 h-full w-full"
@@ -47,44 +54,79 @@ function AvatarLoadFrame({ active }: { active: boolean }) {
       <path
         d={RECT_PATH}
         fill="none"
-        stroke="rgba(0,0,0,0.15)"
-        strokeWidth={3}
+        stroke="rgba(30,58,95,0.25)"
+        strokeWidth={4}
       />
-      {active && (
-        <path
-          d={RECT_PATH}
-          fill="none"
-          stroke="#1e3a5f"
-          strokeWidth={3}
-          strokeLinecap="round"
-          strokeLinejoin="round"
-          pathLength={1}
-          strokeDasharray={1}
-          strokeDashoffset={1}
-          style={{
-            animation: `review-rect-fill ${AUTOPLAY_MS}ms linear forwards`,
-          }}
-        />
-      )}
+      <path
+        ref={pathRef}
+        d={RECT_PATH}
+        fill="none"
+        stroke="#1e3a5f"
+        strokeWidth={4}
+        strokeLinecap="round"
+        strokeLinejoin="round"
+        className="review-avatar-progress"
+      />
     </svg>
   );
 }
 
 export default function ReviewSection() {
+  const sectionRef = useRef<HTMLElement | null>(null);
+  const loadFrameRefs = useRef<(SVGPathElement | null)[]>([]);
   const [activeIndex, setActiveIndex] = useState(0);
+  const [cycleKey, setCycleKey] = useState(0);
   const testimonial = TESTIMONIALS[activeIndex];
 
-  useEffect(() => {
-    const t = setInterval(() => {
-      setActiveIndex((i) => (i + 1) % TESTIMONIALS.length);
-    }, AUTOPLAY_MS);
-    return () => clearInterval(t);
-  }, []);
+  const { contextSafe } = useGSAP({ scope: sectionRef });
+
+  const handleReviewerSelect = contextSafe((index: number) => {
+    setActiveIndex(index);
+    // Erzwingt Neustart des aktiven Progress-Rings, auch bei Klick auf denselben Avatar.
+    setCycleKey((key) => key + 1);
+  });
+
+  useGSAP(
+    () => {
+      const advanceToNext = contextSafe(() => {
+        setActiveIndex((i) => (i + 1) % TESTIMONIALS.length);
+      });
+
+      loadFrameRefs.current.forEach((path, index) => {
+        if (!path) return;
+        const length = path.getTotalLength();
+
+        gsap.set(path, {
+          drawSVG: "0% 0%",
+          strokeDasharray: length,
+          strokeDashoffset: length,
+          opacity: index === activeIndex ? 1 : 0,
+        });
+      });
+
+      const activePath = loadFrameRefs.current[activeIndex];
+      if (!activePath) return;
+
+      const timeline = gsap.timeline({
+        defaults: { ease: "none" },
+        onComplete: advanceToNext,
+      });
+
+      timeline.to(activePath, {
+        drawSVG: "0% 100%",
+        strokeDashoffset: 0,
+        duration: AUTOPLAY_MS / 1000,
+      });
+
+      return () => timeline.kill();
+    },
+    { scope: sectionRef, dependencies: [activeIndex, cycleKey], revertOnUpdate: true }
+  );
 
   return (
     <section
-      className="pt-20 pb-16 pl-6 pr-6 md:pt-24 md:pb-44 md:px-12"
-      style={{ backgroundColor: SECTION_BG }}
+      ref={sectionRef}
+      className="bg-white pt-20 pb-16 pl-6 pr-6 md:pt-24 md:pb-44 md:px-12"
       aria-labelledby="review-heading"
     >
       <div className="mx-auto max-w-6xl">
@@ -109,7 +151,7 @@ export default function ReviewSection() {
                 role="tab"
                 aria-selected={index === activeIndex}
                 aria-label={`Feedback von ${t.name} anzeigen`}
-                onClick={() => setActiveIndex(index)}
+                onClick={() => handleReviewerSelect(index)}
                 className="relative h-20 w-20 shrink-0 rounded-2xl outline-none focus-visible:ring-2 focus-visible:ring-slate-800 focus-visible:ring-offset-2 focus-visible:ring-offset-white"
               >
                 {/* Bild zentriert, Rahmen außen herum */}
@@ -124,7 +166,11 @@ export default function ReviewSection() {
                     />
                   </span>
                 </span>
-                <AvatarLoadFrame active={index === activeIndex} />
+                <AvatarLoadFrame
+                  pathRef={(node) => {
+                    loadFrameRefs.current[index] = node;
+                  }}
+                />
               </button>
             ))}
           </div>
@@ -135,8 +181,7 @@ export default function ReviewSection() {
             id={`review-panel-${activeIndex}`}
             aria-live="polite"
             aria-label={`Aktuelles Feedback von ${testimonial.name}`}
-            className="h-[280px] min-h-[280px] w-full flex-1 rounded-2xl px-6 py-6 shadow-xl md:h-auto md:min-h-0 md:min-w-0 md:px-8 md:py-8"
-            style={{ backgroundColor: REVIEW_BOX_BG }}
+            className="h-[280px] min-h-[280px] w-full flex-1 rounded-2xl bg-[#F1F0EC] px-6 py-6 md:h-auto md:min-h-0 md:min-w-0 md:px-8 md:py-8"
           >
             <div className="flex h-full flex-col">
               <div className="flex items-start justify-between gap-4">

@@ -25,6 +25,7 @@ html {
   font-size: 16px;
   -webkit-text-size-adjust: 100%;
   text-size-adjust: 100%;
+  scroll-behavior: smooth;
 }
 
 body {
@@ -41,6 +42,71 @@ body {
   overflow-wrap: break-word;
 }
 
+html.viewport-lock,
+body.viewport-lock {
+  overflow: hidden;
+  overscroll-behavior: none;
+}
+
+body.viewport-lock {
+  position: fixed;
+  overflow: hidden;
+  width: 100%;
+  padding-right: 0;
+  top: calc(var(--viewport-lock-scroll-y, 0px) * -1);
+  left: 0;
+  right: 0;
+}
+
+body.viewport-lock.viewport-lock-smoother {
+  position: static;
+  top: auto;
+  left: auto;
+  right: auto;
+}
+
+/* ScrollSmoother: Viewport-Wrapper (nur Desktop/Tablet) */
+#smooth-wrapper {
+  overflow: visible;
+  position: relative;
+  inset: auto;
+  height: auto;
+  width: 100%;
+}
+
+@media (min-width: 1024px) and (hover: hover) and (pointer: fine) {
+  #smooth-wrapper {
+    overflow: hidden;
+    position: fixed;
+    inset: 0;
+    height: 100%;
+    width: 100%;
+  }
+}
+
+#smooth-content {
+  overflow: visible;
+  width: 100%;
+}
+
+/* Verhindert Hero-Flash vor ScrollSmoother-Init bei Reload */
+html.ss-preinit #smooth-content {
+  transform: translate3d(0, calc(var(--ss-initial-y, 0) * -1px), 0);
+}
+
+.smooth-content--ready {
+  visibility: visible;
+}
+
+.nav-shell {
+  visibility: hidden;
+  will-change: transform;
+}
+
+.nav-shell--ready {
+  visibility: visible;
+}
+
 /* Keine Umrandungen bei Klick (Mouse); Fokus nur bei Tastatur für Barrierefreiheit */
 *:focus {
   outline: none;
@@ -52,8 +118,8 @@ body {
 }
 
 *:focus-visible {
-  outline: 2px solid currentColor;
-  outline-offset: 2px;
+  outline: none;
+  box-shadow: none;
 }
 
 /* Kein Skalierungs-/Einblend-Effekt bei Bildern – verhindert „von Mitte größer werden“ */
@@ -61,12 +127,118 @@ img {
   transition: none !important;
 }
 
-/* Review-Section: Lade-Rahmen (pathLength=1) um Avatar – 3 s bis zum Wechsel */
-@keyframes review-rect-fill {
-  from {
-    stroke-dashoffset: 1;
+.hero-v2-overlay {
+  background:
+    linear-gradient(rgba(117, 150, 174, 0.18), rgba(117, 150, 174, 0.18)),
+    linear-gradient(rgba(41, 37, 36, 0.6), rgba(41, 37, 36, 0.6));
+}
+
+.hero-v2-video--ready {
+  opacity: 1 !important;
+}
+
+.hero-v2--reduced-motion video {
+  display: none;
+}
+
+.hero-v2-scroll-indicator {
+  animation: hero-scroll-hint 2.2s cubic-bezier(0.22, 1, 0.36, 1) infinite;
+}
+
+.hero-v2-scroll-indicator-dot {
+  animation: hero-scroll-dot 1.9s ease-in-out infinite;
+}
+
+@keyframes hero-scroll-hint {
+  0%,
+  100% {
+    transform: translateY(0);
   }
-  to {
-    stroke-dashoffset: 0;
+  50% {
+    transform: translateY(7px);
   }
 }
+
+@keyframes hero-scroll-dot {
+  0% {
+    transform: translateY(0);
+    opacity: 1;
+  }
+  65% {
+    transform: translateY(18px);
+    opacity: 0.25;
+  }
+  66% {
+    transform: translateY(0);
+    opacity: 0;
+  }
+  100% {
+    transform: translateY(0);
+    opacity: 1;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .hero-v2-scroll-indicator,
+  .hero-v2-scroll-indicator-dot {
+    animation: none;
+  }
+}
+
+/* Kontaktformular: natives <input type="date"> – Höhe wie andere Felder; Breite über umschließendes div (max-width) */
+input.contact-form-date-input {
+  box-sizing: border-box;
+  display: block;
+  width: 100%;
+  min-width: 0;
+  max-width: 100%;
+  height: 2.75rem;
+  line-height: 2.75rem;
+}
+
+input.contact-form-date-input::-webkit-date-and-time-value {
+  text-align: start;
+}
+
+input.contact-form-date-input::-webkit-datetime-edit,
+input.contact-form-date-input::-webkit-datetime-edit-fields-wrapper {
+  min-width: 0;
+}
+
+input.contact-form-date-input::-webkit-datetime-edit {
+  padding: 0;
+}
+
+/* Kontaktformular: Select – einheitlicher Pfeil, gleiche Optik wie Textfelder */
+select.contact-form-select {
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 24 24' stroke='%2364748b'%3E%3Cpath stroke-linecap='round' stroke-linejoin='round' stroke-width='2' d='M19 9l-7 7-7-7'/%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: right 0.65rem center;
+  background-size: 1rem;
+}
+
+/* Kontaktformular: alle nativen Fokus-Indikatoren (inkl. Safari-Glow) unterdruecken */
+.contact-form-section input:focus,
+.contact-form-section select:focus,
+.contact-form-section textarea:focus,
+.contact-form-section button:focus,
+.contact-form-section input:focus-visible,
+.contact-form-section select:focus-visible,
+.contact-form-section textarea:focus-visible,
+.contact-form-section button:focus-visible {
+  outline: none !important;
+  box-shadow: none !important;
+  -webkit-box-shadow: none !important;
+}
+
+/* Snap-Carousels: sichtbare horizontale Scrollbar ausblenden */
+.snap-carousel {
+  -ms-overflow-style: none;
+  scrollbar-width: none;
+}
+
+.snap-carousel::-webkit-scrollbar {
+  display: none;
+}
+
+

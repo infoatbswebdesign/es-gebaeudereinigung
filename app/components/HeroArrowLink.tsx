@@ -11,9 +11,9 @@ export default function HeroArrowLink() {
   const containerRef = useRef<HTMLAnchorElement>(null);
   const arrowRef = useRef<HTMLSpanElement>(null);
 
-  const { contextSafe } = useGSAP({ scope: containerRef });
+  useGSAP({ scope: containerRef });
 
-  const handleMouseEnter = contextSafe(() => {
+  const handleMouseEnter = () => {
     if (!arrowRef.current) return;
     if (!window.matchMedia("(hover: hover)").matches) return;
 
@@ -28,13 +28,13 @@ export default function HeroArrowLink() {
       duration: 0.5,
       ease: "sine.inOut",
     });
-  });
+  };
 
-  const handleMouseLeave = contextSafe(() => {
+  const handleMouseLeave = () => {
     if (!arrowRef.current) return;
     gsap.killTweensOf(arrowRef.current);
     gsap.to(arrowRef.current, { x: 0, duration: 0.35, ease: "sine.inOut" });
-  });
+  };
 
   return (
     <Link

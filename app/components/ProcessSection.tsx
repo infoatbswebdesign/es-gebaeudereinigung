@@ -1,14 +1,11 @@
 "use client";
 
 import Image from "next/image";
-import Link from "next/link";
-import { useRef, useState, useEffect } from "react";
+import { useRef, useState } from "react";
 import gsap from "gsap";
 import { useGSAP } from "@gsap/react";
 
 gsap.registerPlugin(useGSAP);
-
-const SECTION_BG = "#ffffff";
 
 const PROCESS_IMAGES = [
   "/putzfrau-vereinbart-termin-es-gebeaudeservice.jpg",
@@ -46,14 +43,13 @@ const STEPS = [
 export default function ProcessSection() {
   const [activeIndex, setActiveIndex] = useState(0);
   const circleRefs = useRef<(HTMLDivElement | null)[]>([]);
-  const mobileCardRefs = useRef<(HTMLElement | null)[]>([]);
   const scrollRef = useRef<HTMLDivElement>(null);
   const sectionRef = useRef<HTMLElement>(null);
   const isDesktop = useRef(true);
 
-  const { contextSafe } = useGSAP({ scope: sectionRef });
+  useGSAP({ scope: sectionRef });
 
-  const greyOutNonActive = contextSafe((active: number) => {
+  const greyOutNonActive = (active: number) => {
     circleRefs.current.forEach((el, i) => {
       if (!el) return;
       const isActive = i === active;
@@ -64,22 +60,9 @@ export default function ProcessSection() {
         ease: "power2.out",
       });
     });
-  });
+  };
 
-  const greyOutMobileCards = contextSafe((active: number) => {
-    mobileCardRefs.current.forEach((el, i) => {
-      if (!el) return;
-      const isActive = i === active;
-      gsap.to(el, {
-        opacity: isActive ? 1 : 0.45,
-        filter: isActive ? "grayscale(0)" : "grayscale(1)",
-        duration: 0.35,
-        ease: "power2.out",
-      });
-    });
-  });
-
-  const setAllActive = contextSafe(() => {
+  const setAllActive = () => {
     circleRefs.current.forEach((el) => {
       if (!el) return;
       gsap.to(el, {
@@ -89,54 +72,59 @@ export default function ProcessSection() {
         ease: "power2.out",
       });
     });
-    mobileCardRefs.current.forEach((el) => {
-      if (!el) return;
-      gsap.to(el, { opacity: 1, filter: "grayscale(0)", duration: 0.3, ease: "power2.out" });
-    });
-  });
+  };
 
-  useEffect(() => {
-    const mq = window.matchMedia("(min-width: 768px)");
-    isDesktop.current = mq.matches;
-    const handler = () => {
+  useGSAP(
+    () => {
+      const mq = window.matchMedia("(min-width: 768px)");
       isDesktop.current = mq.matches;
-      if (mq.matches) setAllActive();
-    };
-    mq.addEventListener("change", handler);
-    return () => mq.removeEventListener("change", handler);
-  }, [setAllActive]);
+
+      const onMediaChange = () => {
+        isDesktop.current = mq.matches;
+        if (mq.matches) setAllActive();
+      };
+
+      mq.addEventListener("change", onMediaChange);
+      return () => mq.removeEventListener("change", onMediaChange);
+    },
+    { scope: sectionRef, dependencies: [setAllActive] }
+  );
 
   const mobileRatiosRef = useRef<number[]>([0, 0, 0]);
 
-  useEffect(() => {
-    if (!scrollRef.current || isDesktop.current) return;
-    const container = scrollRef.current;
-    const cards = container.querySelectorAll("[data-process-card]");
-    if (!cards.length) return;
+  useGSAP(
+    () => {
+      if (!scrollRef.current || isDesktop.current) return;
 
-    const observer = new IntersectionObserver(
-      (entries) => {
-        if (isDesktop.current) return;
-        entries.forEach((entry) => {
-          const index = Number(entry.target.getAttribute("data-step-index"));
-          if (Number.isNaN(index)) return;
-          mobileRatiosRef.current[index] = entry.intersectionRatio;
-        });
-        const ratios = mobileRatiosRef.current;
-        const maxIndex = ratios.reduce((best, r, i) => (r > ratios[best] ? i : best), 0);
-        setActiveIndex(maxIndex);
-        greyOutMobileCards(maxIndex);
-      },
-      { root: scrollRef.current, rootMargin: "0px", threshold: [0, 0.25, 0.5, 0.75, 1] }
-    );
+      const container = scrollRef.current;
+      const cards = container.querySelectorAll("[data-process-card]");
+      if (!cards.length) return;
 
-    cards.forEach((card) => observer.observe(card));
-    const t = setTimeout(() => greyOutMobileCards(0), 100);
-    return () => {
-      clearTimeout(t);
-      observer.disconnect();
-    };
-  }, [greyOutMobileCards]);
+      const observer = new IntersectionObserver(
+        (entries) => {
+          if (isDesktop.current) return;
+
+          entries.forEach((entry) => {
+            const index = Number(entry.target.getAttribute("data-step-index"));
+            if (Number.isNaN(index)) return;
+            mobileRatiosRef.current[index] = entry.intersectionRatio;
+          });
+
+          const ratios = mobileRatiosRef.current;
+          const maxIndex = ratios.reduce((best, r, i) => (r > ratios[best] ? i : best), 0);
+          setActiveIndex(maxIndex);
+        },
+        { root: scrollRef.current, rootMargin: "0px", threshold: [0, 0.25, 0.5, 0.75, 1] }
+      );
+
+      cards.forEach((card) => observer.observe(card));
+
+      return () => {
+        observer.disconnect();
+      };
+    },
+    { scope: sectionRef }
+  );
 
   const handleMouseEnter = (index: number) => {
     if (!isDesktop.current) return;
@@ -152,8 +140,7 @@ export default function ProcessSection() {
   return (
     <section
       ref={sectionRef}
-      className="relative py-16 px-6 md:py-24 md:px-12"
-      style={{ background: SECTION_BG }}
+      className="relative bg-white py-16 px-6 md:py-24 md:px-12"
       aria-labelledby="process-heading"
     >
       <div className="mx-auto max-w-6xl">
@@ -177,10 +164,9 @@ export default function ProcessSection() {
           {STEPS.map((step, index) => (
             <div
               key={step.id}
-              className="flex flex-col items-center"
-              style={{
-                marginTop: index === 0 ? 0 : index === 1 ? "3.5rem" : "7rem",
-              }}
+              className={`flex flex-col items-center ${
+                index === 0 ? "mt-0" : index === 1 ? "mt-14" : "mt-28"
+              }`}
             >
               <div
                 ref={(el) => {
@@ -202,23 +188,17 @@ export default function ProcessSection() {
               >
                 {/* Nummer im Kreis */}
                 <span
-                  className="flex h-14 w-14 shrink-0 items-center justify-center rounded-full text-base font-semibold transition-colors lg:h-16 lg:w-16 lg:text-lg"
-                  style={{
-                    backgroundColor:
-                      activeIndex === index ? "#334155" : "transparent",
-                    color: activeIndex === index ? "#fff" : "#94a3b8",
-                    border:
-                      activeIndex === index
-                        ? "2px solid #fff"
-                        : "2px solid #cbd5e1",
-                  }}
+                  className={`flex h-14 w-14 shrink-0 items-center justify-center rounded-full border-2 text-base font-semibold transition-colors lg:h-16 lg:w-16 lg:text-lg ${
+                    activeIndex === index
+                      ? "border-white bg-slate-700 text-white"
+                      : "border-slate-300 bg-transparent text-slate-400"
+                  }`}
                 >
                   {step.number}
                 </span>
                 {/* Bild darunter – next/image mit width/height (Platz reserviert, kein Layout-Shift) */}
                 <div
-                  className="relative mt-4 overflow-hidden rounded-lg border-2 border-dashed border-slate-300 bg-slate-100"
-                  style={{ width: 160, height: 128 }}
+                  className="relative mt-4 h-[128px] w-[160px] overflow-hidden rounded-lg border-2 border-dashed border-slate-300 bg-slate-100"
                 >
                   <Image
                     src={PROCESS_IMAGES[index]}
@@ -226,8 +206,7 @@ export default function ProcessSection() {
                     width={160}
                     height={128}
                     sizes="160px"
-                    className="object-cover"
-                    style={{ width: "100%", height: "100%", objectFit: "cover", transition: "none" }}
+                    className="h-full w-full object-cover"
                   />
                 </div>
               </div>
@@ -243,12 +222,6 @@ export default function ProcessSection() {
           <p className="mt-3 text-base leading-relaxed text-slate-600 md:text-lg">
             {STEPS[activeIndex].description}
           </p>
-          <Link
-            href={STEPS[activeIndex].readMoreHref}
-            className="mt-4 inline-block text-base text-slate-600 underline decoration-slate-400 underline-offset-2 hover:text-slate-900 hover:decoration-slate-600 md:text-lg"
-          >
-            Mehr erfahren
-          </Link>
         </div>
 
         {/* Mobil: Titel + Intro + horizontale Snap-Scroll-Cards – Schrift wie ÜberUns */}
@@ -263,28 +236,32 @@ export default function ProcessSection() {
           </p>
           <div
             ref={scrollRef}
-            className="mt-4 flex gap-6 overflow-x-auto pb-4 pt-2 snap-x snap-mandatory -mx-6 px-6 md:mx-0 md:px-0"
+            className="snap-carousel mt-4 flex gap-6 overflow-x-auto pb-4 pt-2 snap-x snap-mandatory -mx-6 px-6 [scrollbar-width:none] [-ms-overflow-style:none] [&::-webkit-scrollbar]:h-0 [&::-webkit-scrollbar]:w-0 md:mx-0 md:px-0"
           >
             {STEPS.map((step, index) => (
               <article
                 key={step.id}
-                ref={(el) => {
-                  mobileCardRefs.current[index] = el;
-                }}
                 data-process-card
                 data-step-index={index}
-                className="flex w-[280px] shrink-0 snap-center flex-col p-5"
+                className={`flex w-[280px] shrink-0 snap-center flex-col p-5 transition-all duration-300 ${
+                  activeIndex === index ? "opacity-100 grayscale-0" : "opacity-50 grayscale"
+                }`}
               >
                 {/* Prozessschritt-Nummer oben links */}
                 <div className="flex justify-start">
-                  <span className="flex h-10 w-10 items-center justify-center rounded-full border-2 border-slate-300 bg-transparent text-sm font-semibold text-slate-600">
+                  <span
+                    className={`flex h-10 w-10 items-center justify-center rounded-full border-2 text-sm font-semibold transition-colors ${
+                      activeIndex === index
+                        ? "border-white bg-slate-700 text-white"
+                        : "border-slate-300 bg-transparent text-slate-600"
+                    }`}
+                  >
                     {step.number}
                   </span>
                 </div>
                 {/* Bild vom Prozess – next/image mit width/height (Platz reserviert, kein Layout-Shift) */}
                 <div
-                  className="relative my-4 mx-auto overflow-hidden rounded-xl bg-slate-100"
-                  style={{ width: 200, height: 150 }}
+                  className="relative my-4 mx-auto h-[150px] w-[200px] overflow-hidden rounded-xl bg-slate-100"
                 >
                   <Image
                     src={PROCESS_IMAGES[index]}
@@ -292,8 +269,7 @@ export default function ProcessSection() {
                     width={200}
                     height={150}
                     sizes="200px"
-                    className="object-cover"
-                    style={{ width: "100%", height: "100%", objectFit: "cover", transition: "none" }}
+                    className="h-full w-full object-cover"
                   />
                 </div>
                 {/* Beschreibung darunter – Schriftgrößen wie ÜberUns */}
@@ -303,12 +279,6 @@ export default function ProcessSection() {
                 <p className="mt-2 text-base leading-relaxed text-slate-600">
                   {step.description}
                 </p>
-                <Link
-                  href={step.readMoreHref}
-                  className="mt-3 inline-block text-base text-slate-600 underline decoration-slate-400 underline-offset-2 hover:text-slate-900"
-                >
-                  Mehr erfahren
-                </Link>
               </article>
             ))}
           </div>
