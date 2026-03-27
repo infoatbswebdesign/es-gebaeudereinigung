@@ -2,7 +2,6 @@ import type { Metadata, Viewport } from "next";
 import { Geist_Mono, Manrope } from "next/font/google";
 import SmoothScrollShell from "./components/SmoothScrollShell";
 import SiteFooter from "./components/SiteFooter";
-import WebVitalsReporter from "./components/WebVitalsReporter";
 import { SmootherProvider } from "./context/SmootherContext";
 import "./globals.css";
 
@@ -58,7 +57,6 @@ export default function RootLayout({
       <body
         className={`${geistMono.variable} ${manrope.variable} ${manrope.className} antialiased`}
       >
-        <WebVitalsReporter />
         <SmootherProvider>
           <SmoothScrollShell>
             {children}
