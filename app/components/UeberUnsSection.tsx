@@ -7,25 +7,23 @@ export default function UeberUnsSection() {
     >
       <div className="flex flex-col gap-10 md:flex-row md:items-center md:justify-between md:gap-12">
         <h2 id="ueber-uns-heading" className="sr-only">
-          Über uns
+          Gebäudereinigung in Esslingen, Stuttgart und Umgebung
         </h2>
-        {/* Linke Spalte: Willkommen + Werte, großer fetter Absatz */}
+        {/* Linke Spalte: SEO-starker Leitsatz mit Keyword, Stadt und Spezialisierung */}
         <p className="max-w-5xl text-2xl font-bold leading-snug text-slate-900 md:text-3xl lg:text-4xl">
-          Herzlich willkommen bei{" "}
-          <span className="text-[#7596AE]">ES-Gebäudeservice</span>. Als
-          zuverlässiger Partner für professionelle Gebäudereinigung stehen wir für
-          Qualität, Sorgfalt und Kundenzufriedenheit.
+          <span className="text-[#7596AE]">Gebäudereinigung in Esslingen,
+          Stuttgart und Umgebung,</span> spezialisiert auf Büros, Praxen
+          und Gewerbeobjekte.
         </p>
-        {/* Rechte Spalte: Region + Leistungsversprechen */}
-        <div className="flex max-w-md flex-col gap-6">
+        {/* Rechte Spalte: kurzer Absatz */}
+        <div className="max-w-md">
           <p className="text-base leading-relaxed text-slate-700 md:text-lg">
-            Im{" "}
+            Vom Standort in{" "}
             <span className="font-medium text-sky-700">
-              Großraum Stuttgart, Esslingen und Umgebung
+              Esslingen am Neckar
             </span>{" "}
-            bieten wir unseren Auftraggebern zuverlässige und professionelle
-            Reinigungslösungen – flexibel, gründlich und termingerecht. Wir freuen
-            uns darauf, Sie zu unterstützen.
+            betreuen wir Ihr Objekt von der Unterhaltsreinigung bis zum
+            Winterdienst, mit festen Teams und persönlichem Ansprechpartner.
           </p>
         </div>
       </div>

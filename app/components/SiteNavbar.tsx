@@ -1,5 +1,6 @@
 "use client";
 
+import Image from "next/image";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useEffect, useRef, useState } from "react";
@@ -10,6 +11,7 @@ import { useGSAP } from "@gsap/react";
 import { CONTACT_EMAIL, CONTACT_PHONE_DISPLAY, CONTACT_PHONE_TEL } from "@/app/contact";
 import { useSmootherReady } from "../context/SmootherContext";
 import { acquireViewportLock, releaseViewportLock } from "../viewportLock";
+import { logoWhite } from "@/app/assets/images";
 
 gsap.registerPlugin(useGSAP, ScrollTrigger);
 
@@ -17,9 +19,13 @@ gsap.registerPlugin(useGSAP, ScrollTrigger);
 
 const SOLID_BG_MIN_PX = 400;
 const SOLID_BG_VH_RATIO = 0.72;
+// Show/Hide darf früher zuschlagen als der Background-Wechsel,
+// damit die Navbar beim Scrollen schneller verschwindet.
+const NAV_HIDE_MIN_PX = 220;
+const NAV_HIDE_VH_RATIO = 0.42;
 const DELTA_MIN = 4;
 
-const LOGO_WHITE_SRC = "/logo-es-gebaeudeservice-white.png";
+const LOGO_WHITE_SRC = logoWhite;
 const NAV_HIDE_DURATION = 0.3;
 const NAV_HIDE_EASE = "power2.in";
 const NAV_SHOW_DURATION = 0.55;
@@ -63,6 +69,11 @@ function menuButtonOpenFixedYPx(): number {
 function solidBackgroundScrollThreshold(): number {
   if (typeof window === "undefined") return SOLID_BG_MIN_PX;
   return Math.max(SOLID_BG_MIN_PX, Math.round(window.innerHeight * SOLID_BG_VH_RATIO));
+}
+
+function navHideScrollThreshold(): number {
+  if (typeof window === "undefined") return NAV_HIDE_MIN_PX;
+  return Math.max(NAV_HIDE_MIN_PX, Math.round(window.innerHeight * NAV_HIDE_VH_RATIO));
 }
 
 function isViewportLockActive(): boolean {
@@ -120,12 +131,19 @@ export default function SiteNavbar() {
   const [menuPeek, setMenuPeek] = useState(false);
   const smootherReady = useSmootherReady();
 
+  // Markiert, dass das Menue wegen Navigation (Link-Klick) geschlossen wird.
+  // In dem Fall darf der Viewport-Lock die alte Scroll-Position NICHT mehr
+  // restaurieren – die Zielseite wird ohnehin nach oben gescrollt.
+  const closingForNavigationRef = useRef(false);
+
   useEffect(() => {
     if (!menuOpen || typeof window === "undefined") return undefined;
     acquireViewportLock();
 
     return () => {
-      releaseViewportLock();
+      const skipScrollRestore = closingForNavigationRef.current;
+      closingForNavigationRef.current = false;
+      releaseViewportLock({ skipScrollRestore });
     };
   }, [menuOpen]);
 
@@ -224,13 +242,14 @@ export default function SiteNavbar() {
         shell.classList.add("nav-shell--ready");
         setNavReady(true);
         const y0 = currentScrollY();
-        const navBehaviorThreshold = solidBackgroundScrollThreshold();
+        const bgThreshold0 = solidBackgroundScrollThreshold();
+        const hideThreshold0 = navHideScrollThreshold();
         const storedVisible = sessionStorage.getItem(NAV_VISIBILITY_STORAGE_KEY);
-        const startVisible = y0 < navBehaviorThreshold ? true : storedVisible !== "false";
+        const startVisible = y0 < hideThreshold0 ? true : storedVisible !== "false";
 
         gsap.set(shell, { yPercent: startVisible ? 0 : -100, autoAlpha: 1 });
         visibleRef.current = startVisible;
-        setSolidNavBg(y0 >= navBehaviorThreshold);
+        setSolidNavBg(y0 >= bgThreshold0);
         applyMorphLayout(logoLink, menuButton, gsap.utils.clamp(0, 1, y0 / logoScrollEndPx()));
         lastYRef.current = y0;
 
@@ -267,6 +286,7 @@ export default function SiteNavbar() {
             }
 
             const bgThreshold = solidBackgroundScrollThreshold();
+            const hideThreshold = navHideScrollThreshold();
             const hasSolidBg = yCurrent >= bgThreshold;
             setSolidNavBg((prev) => (prev === hasSolidBg ? prev : hasSolidBg));
 
@@ -276,7 +296,7 @@ export default function SiteNavbar() {
               gsap.utils.clamp(0, 1, yCurrent / logoScrollEndPx())
             );
 
-            if (yCurrent < bgThreshold) {
+            if (yCurrent < hideThreshold) {
               setVisible(true);
               lastYRef.current = yCurrent;
               rafId = 0;
@@ -312,14 +332,15 @@ export default function SiteNavbar() {
       }
 
       const y0 = currentScrollY(smoother);
-      const navBehaviorThreshold = solidBackgroundScrollThreshold();
+      const bgThreshold0 = solidBackgroundScrollThreshold();
+      const hideThreshold0 = navHideScrollThreshold();
       const storedVisible = sessionStorage.getItem(NAV_VISIBILITY_STORAGE_KEY);
-      const startVisible = y0 < navBehaviorThreshold ? true : storedVisible !== "false";
+      const startVisible = y0 < hideThreshold0 ? true : storedVisible !== "false";
       const initialLogoProgress = gsap.utils.clamp(0, 1, y0 / logoScrollEndPx());
 
       gsap.set(shell, { yPercent: startVisible ? 0 : -100 });
       visibleRef.current = startVisible;
-      setSolidNavBg(y0 >= navBehaviorThreshold);
+      setSolidNavBg(y0 >= bgThreshold0);
       applyMorphLayout(logoLink, menuButton, initialLogoProgress);
 
       /* Forced Reflow: Browser verarbeitet transforms vor visibility-Wechsel */
@@ -356,9 +377,10 @@ export default function SiteNavbar() {
         }
 
         const bgThreshold = solidBackgroundScrollThreshold();
+        const hideThreshold = navHideScrollThreshold();
         setSolidNavBg(yCurrent >= bgThreshold);
 
-        if (yCurrent < bgThreshold) {
+        if (yCurrent < hideThreshold) {
           setVisible(true);
           lastYRef.current = yCurrent;
           return;
@@ -471,11 +493,13 @@ export default function SiteNavbar() {
               : "focus:ring-offset-transparent"
           } w-max`}
         >
-          <img
+          <Image
             src={LOGO_WHITE_SRC}
             alt="ES Gebäudereinigung"
+            priority
+            placeholder="blur"
+            sizes="(max-width: 768px) 85vw, 390px"
             className="block h-full w-auto max-w-[min(85vw,390px)] object-contain object-left"
-            decoding="sync"
             draggable={false}
           />
         </Link>
@@ -569,10 +593,13 @@ export default function SiteNavbar() {
                         href={item.href}
                         scroll
                         onClick={() => {
+                          // Viewport-Lock soll beim Menu-Close NICHT die
+                          // alte Position auf der Quellseite wiederherstellen.
+                          closingForNavigationRef.current = true;
                           closeMenu();
-                          const smoother = ScrollSmoother.get();
-                          smoother?.scrollTo(0, false);
-                          ScrollTrigger.update();
+                          // Smoother-Scroll-Reset passiert ohnehin ueber den
+                          // useLayoutEffect im SmoothScrollShell bei pathname-
+                          // Change – zusaetzlich hier kein Bedarf.
                         }}
                         aria-current={isActive ? "page" : undefined}
                         className={`group flex w-full items-center justify-between gap-3 ${

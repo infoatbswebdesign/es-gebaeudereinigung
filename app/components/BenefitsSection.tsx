@@ -1,37 +1,51 @@
 const BENEFITS = [
   {
     id: 1,
-    title: "Zuverlässigkeit",
+    title: "Festes Team statt Subunternehmer",
     description:
-      "Pünktlich, termingerecht und mit konstanter Qualität – Sie können sich auf uns verlassen.",
+      "Dauerhaft dasselbe festangestellte Reinigungsteam für Ihr Objekt in Esslingen und Stuttgart.",
     iconBg: "bg-slate-800",
-    iconPath: "M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z",
+    iconPath: "M17 20h5v-2a4 4 0 00-3-3.87M9 20H4v-2a4 4 0 013-3.87m6-5.13a4 4 0 11-8 0 4 4 0 018 0zm6 0a4 4 0 11-8 0 4 4 0 018 0z",
   },
   {
     id: 2,
-    title: "Transparenz",
+    title: "Persönlicher Ansprechpartner",
     description:
-      "Klare Angebote ohne versteckte Kosten. Sie wissen von Anfang an, was Sie erwartet.",
+      "Direkter Draht zum festen Objektleiter. Kurze Wege, schnelle Antworten, verbindliche Zusagen.",
     iconBg: "bg-indigo-700",
-    iconPath: "M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z",
+    iconPath: "M3 10h2l3.5 11H20l-1.5-6H7M16 6a4 4 0 10-8 0 4 4 0 008 0z",
   },
   {
     id: 3,
-    title: "Flexibilität",
+    title: "Schnell vor Ort in der Region",
     description:
-      "Reinigung nach Ihrem Rhythmus – ob täglich, wöchentlich oder nach Bedarf.",
+      "Bei Sonderreinigung, Glasbruch oder Wasserschaden sind wir in Esslingen und Stuttgart oft am selben Tag da.",
     iconBg: "bg-sky-700",
     iconPath: "M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z",
   },
   {
     id: 4,
-    title: "Erfahrung",
+    title: "Geprüft und versichert",
     description:
-      "Langjährige Praxis in gewerblicher Reinigung – für Büros, Praxen und Objekte.",
+      "Festangestellte, geschulte Reinigungskräfte mit Betriebshaftpflicht und DSGVO konformen Abläufen.",
     iconBg: "bg-emerald-700",
-    iconPath: "M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4",
+    iconPath: "M12 3l8 4v5c0 5-3.5 8.5-8 9-4.5-.5-8-4-8-9V7l8-4z M9 12l2 2 4-4",
   },
 ];
+
+const BENEFITS_JSON_LD = {
+  "@context": "https://schema.org",
+  "@type": "ItemList",
+  name: "Ihre Vorteile mit ES Gebäudeservice aus Esslingen",
+  description:
+    "Diese Leistungen machen ES Gebäudeservice zum bevorzugten Partner für Gebäudereinigung in Esslingen, Stuttgart und der Region Neckar.",
+  itemListElement: BENEFITS.map((benefit, index) => ({
+    "@type": "ListItem",
+    position: index + 1,
+    name: benefit.title,
+    description: benefit.description,
+  })),
+};
 
 export default function BenefitsSection() {
   return (
@@ -39,12 +53,16 @@ export default function BenefitsSection() {
       className="bg-[#F1F0EC] pt-20 pb-16 pl-6 pr-6 md:pt-28 md:pb-24 md:px-12"
       aria-labelledby="benefits-heading"
     >
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{ __html: JSON.stringify(BENEFITS_JSON_LD) }}
+      />
       <div className="mx-auto max-w-7xl">
         <h2
           id="benefits-heading"
-          className="mx-auto max-w-2xl text-center text-2xl font-bold leading-tight text-slate-900 md:text-3xl lg:text-4xl"
+          className="mx-auto max-w-3xl text-center text-2xl font-bold leading-tight text-slate-900 md:text-3xl lg:text-4xl"
         >
-          Ihre Vorteile
+          Ihre Vorteile mit der Gebäudereinigung ES Gebäudeservice in Esslingen und Stuttgart
         </h2>
 
         {/* Cards: Desktop 4 Spalten, Mobile horizontal Snap-Scroll – wie CardsSection */}
@@ -52,7 +70,7 @@ export default function BenefitsSection() {
           {BENEFITS.map((benefit) => (
             <article
               key={benefit.id}
-              className="flex w-[240px] shrink-0 snap-center flex-col rounded-xl bg-white p-4 shadow-md shadow-slate-200/50 md:w-full md:rounded-2xl md:p-5"
+              className="flex w-[260px] shrink-0 snap-center flex-col rounded-xl bg-white p-4 shadow-md shadow-slate-200/50 md:w-full md:rounded-2xl md:p-5"
             >
               <div
                 className={`mb-3 flex h-8 w-8 items-center justify-center rounded-lg text-white md:mb-3.5 md:h-9 md:w-9 md:rounded-xl ${benefit.iconBg}`}

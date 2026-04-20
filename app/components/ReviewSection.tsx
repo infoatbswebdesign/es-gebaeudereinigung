@@ -5,30 +5,35 @@ import { useRef, useState } from "react";
 import gsap from "gsap";
 import { useGSAP } from "@gsap/react";
 import { DrawSVGPlugin } from "gsap/DrawSVGPlugin";
+import {
+  arztPraxisKunde,
+  geschaeftsfuehrerBauKunde,
+  geschaeftsfuehrerKosmetikKunde,
+} from "@/app/assets/images";
 
 const AUTOPLAY_MS = 4000;
 
 const TESTIMONIALS = [
   {
     id: 0,
-    name: "Maria Schmidt",
-    title: "Büroleitung, Stuttgart",
-    text: "Seit Jahren setzen wir auf ES-Gebäudeservice. Pünktlich, gründlich und unkompliziert – genau das, was wir für unsere Büros brauchen.",
-    avatar: "https://images.unsplash.com/photo-1438761681033-6461ffad8d80?w=128&h=128&fit=crop&crop=face",
+    name: "Andreas Bergmann",
+    title: "Geschäftsführer Kosmetikunternehmen, Stuttgart",
+    text: "Für unser Kosmetikstudio in Stuttgart ist Sauberkeit das Aushängeschild. Das Team von ES Gebäudeservice kommt zuverlässig nach Feierabend. Die Räume glänzen, wenn morgens die ersten Mitarbeiter kommen. Nach zwei Jahren Zusammenarbeit möchten wir niemand anderen mehr in unseren Räumen haben.",
+    avatar: geschaeftsfuehrerKosmetikKunde,
   },
   {
     id: 1,
-    name: "Thomas Weber",
-    title: "Facility Manager, Esslingen",
-    text: "Transparente Angebote und zuverlässige Ausführung. Die Reinigung passt sich unseren Öffnungszeiten an – keine Störung im Betrieb.",
-    avatar: "https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=128&h=128&fit=crop&crop=face",
+    name: "Sabine Krüger",
+    title: "Geschäftsführerin Bauunternehmen, Landkreis Esslingen",
+    text: "Als Bauunternehmen im Landkreis Esslingen brauchen wir jemanden, der flexibel auf unsere Verwaltung und unsere Baustellen reagiert. ES Gebäudeservice übernimmt unsere Unterhaltsreinigung im Büro und die Baugrobreinigung nach Projektende. Feste Ansprechperson, transparente Preise und ein Team, das wirklich mitdenkt.",
+    avatar: geschaeftsfuehrerBauKunde,
   },
   {
     id: 2,
-    name: "Lisa Hoffmann",
-    title: "Praxismanagement, Ludwigsburg",
-    text: "Hygiene und Diskretion sind uns wichtig. ES-Gebäudeservice erfüllt beides und arbeitet termingerecht. Sehr empfehlenswert.",
-    avatar: "https://images.unsplash.com/photo-1494790108377-be9c29b29330?w=128&h=128&fit=crop&crop=face",
+    name: "Dr. Julia Wagner",
+    title: "Praxisinhaberin Arztpraxis, Esslingen am Neckar",
+    text: "In unserer Praxis in Esslingen am Neckar haben Hygiene und Diskretion höchste Priorität. ES Gebäudeservice reinigt unsere Behandlungsräume seit über drei Jahren immer nach Praxisschluss. Gleiche Ansprechperson, gleiche Gründlichkeit, gleiches Vertrauen. Unsere Patientinnen und Patienten merken den Unterschied.",
+    avatar: arztPraxisKunde,
   },
 ];
 
@@ -132,9 +137,9 @@ export default function ReviewSection() {
       <div className="mx-auto max-w-6xl">
         <h2
           id="review-heading"
-          className="text-center text-2xl font-bold leading-tight text-slate-900 md:text-3xl lg:text-4xl"
+          className="mx-auto max-w-3xl text-center text-2xl font-bold leading-tight text-slate-900 md:text-3xl lg:text-4xl"
         >
-          Was unsere Kunden sagen
+          Was unsere Kunden aus Esslingen und Stuttgart sagen
         </h2>
 
         <div className="mt-12 flex flex-col gap-10 md:mt-16 md:flex-row md:items-center md:justify-start md:gap-8">
@@ -162,6 +167,7 @@ export default function ReviewSection() {
                       alt=""
                       width={72}
                       height={72}
+                      placeholder="blur"
                       className="h-full w-full object-cover"
                     />
                   </span>
@@ -181,7 +187,7 @@ export default function ReviewSection() {
             id={`review-panel-${activeIndex}`}
             aria-live="polite"
             aria-label={`Aktuelles Feedback von ${testimonial.name}`}
-            className="h-[280px] min-h-[280px] w-full flex-1 rounded-2xl bg-[#F1F0EC] px-6 py-6 md:h-auto md:min-h-0 md:min-w-0 md:px-8 md:py-8"
+            className="h-[360px] min-h-[360px] w-full flex-1 rounded-2xl bg-[#F1F0EC] px-6 py-6 md:h-auto md:min-h-0 md:min-w-0 md:px-8 md:py-8"
           >
             <div className="flex h-full flex-col">
               <div className="flex items-start justify-between gap-4">
@@ -189,9 +195,8 @@ export default function ReviewSection() {
                   <p className="text-lg font-bold text-slate-900">{testimonial.name}</p>
                   <p className="mt-0.5 text-sm text-slate-600">{testimonial.title}</p>
                 </div>
-                <div className="flex items-center gap-1 text-slate-700" aria-hidden>
-                  <span className="text-2xl">😇</span>
-                  <span className="text-3xl font-serif leading-none">„</span>
+                <div className="text-slate-700" aria-hidden>
+                  <span className="font-serif leading-none text-6xl md:text-7xl">„</span>
                 </div>
               </div>
               <p className="mt-4 flex-1 text-slate-900 leading-relaxed">{testimonial.text}</p>

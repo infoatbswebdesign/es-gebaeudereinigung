@@ -7,6 +7,18 @@ const LOCK_COUNT_KEY = "viewportLockCount";
 const SMOOTHER_LOCK_KEY = "viewportLockSmoother";
 const LOCK_MODE_KEY = "viewportLockMode";
 
+type ReleaseOptions = {
+  /**
+   * Wenn true: beim kompletten Aufheben des Locks wird NICHT versucht, die
+   * ursprueliche Scroll-Position wiederherzustellen. Das brauchen wir, wenn
+   * das Menue geschlossen wird, weil der Nutzer auf einen internen Link
+   * geklickt hat: die Ziel-Seite wird ohnehin ganz nach oben gescrollt –
+   * wuerden wir restoreY anwenden, sehen wir kurz die alte Seite an alter
+   * Position aufblitzen.
+   */
+  skipScrollRestore?: boolean;
+};
+
 function getDocEl(): HTMLElement {
   return document.documentElement;
 }
@@ -40,7 +52,7 @@ export function acquireViewportLock(): void {
   docEl.dataset[LOCK_COUNT_KEY] = String(count + 1);
 }
 
-export function releaseViewportLock(): void {
+export function releaseViewportLock(options?: ReleaseOptions): void {
   if (typeof window === "undefined") return;
 
   const docEl = getDocEl();
@@ -53,9 +65,12 @@ export function releaseViewportLock(): void {
     return;
   }
 
-  const restoreY = Number.parseFloat(docEl.style.getPropertyValue("--viewport-lock-restore-y") || "0");
+  const restoreY = Number.parseFloat(
+    docEl.style.getPropertyValue("--viewport-lock-restore-y") || "0",
+  );
   const smootherWasLocked = docEl.dataset[SMOOTHER_LOCK_KEY] === "true";
   const lockMode = docEl.dataset[LOCK_MODE_KEY] ?? "native";
+  const skipScrollRestore = options?.skipScrollRestore === true;
 
   delete docEl.dataset[LOCK_COUNT_KEY];
   delete docEl.dataset[SMOOTHER_LOCK_KEY];
@@ -69,14 +84,14 @@ export function releaseViewportLock(): void {
   const smoother = ScrollSmoother.get();
   if (smootherWasLocked && smoother) {
     smoother.paused(false);
-    if (lockMode === "native") {
+    if (lockMode === "native" && !skipScrollRestore) {
       smoother.scrollTo(restoreY, false);
       ScrollTrigger.update();
     }
     return;
   }
 
-  if (lockMode === "native") {
+  if (lockMode === "native" && !skipScrollRestore) {
     const previousScrollBehavior = docEl.style.scrollBehavior;
     docEl.style.scrollBehavior = "auto";
     window.scrollTo(0, restoreY);

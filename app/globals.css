@@ -25,7 +25,18 @@ html {
   font-size: 16px;
   -webkit-text-size-adjust: 100%;
   text-size-adjust: 100%;
-  scroll-behavior: smooth;
+  /* WICHTIG: Kein `scroll-behavior: smooth`. Der Browser wuerde sonst jeden
+     programmatischen Scroll (inkl. window.scrollTo(0,0) bei Seitenwechsel und
+     Scroll zu Kontaktformular) animieren. Auf Desktop uebernimmt der GSAP
+     ScrollSmoother das Smoothing, auf Mobile ist nativer Instant-Scroll korrekt. */
+  scroll-behavior: auto;
+  /* Scrollbar permanent reservieren, damit der Inhalt nicht horizontal
+     springt, wenn Overlays/Modals (Consent-Modal, Service-Modale, Nav-Menue)
+     den Viewport sperren und die Scrollbar ausblenden.
+     `scrollbar-gutter: stable` wirkt in modernen Browsern; `overflow-y: scroll`
+     ist der Fallback fuer alles andere und erzwingt die Reservierung. */
+  scrollbar-gutter: stable;
+  overflow-y: scroll;
 }
 
 body {
@@ -42,15 +53,17 @@ body {
   overflow-wrap: break-word;
 }
 
-html.viewport-lock,
-body.viewport-lock {
-  overflow: hidden;
+html.viewport-lock {
+  /* Scrollbar bleibt sichtbar (overflow-y: scroll im html-Root), damit
+     beim Oeffnen/Schliessen des Modals kein horizontaler Layout-Shift
+     entsteht. Das eigentliche Sperren passiert ueber body { position: fixed } */
   overscroll-behavior: none;
 }
 
 body.viewport-lock {
   position: fixed;
   overflow: hidden;
+  overscroll-behavior: none;
   width: 100%;
   padding-right: 0;
   top: calc(var(--viewport-lock-scroll-y, 0px) * -1);
@@ -127,10 +140,39 @@ img {
   transition: none !important;
 }
 
+/*
+ * Hero V2 Overlay – cinematic readability layer
+ * - Vertikaler Verlauf: oben dunkler (Navbar-Lesbarkeit), Mitte leicht aufgehellt
+ *   (Headline atmet), unten dunkler (CTA + Trust-Row Kontrast).
+ * - Radiale Vignette: subtile Tiefenwirkung, lenkt den Blick zur Mitte.
+ * - Markenwarmer Slate-Ton (#0f172a / slate-900) statt reines Schwarz.
+ * - Bewusst KEIN background-Shorthand mit gestapelten linear-gradient(rgba,rgba)
+ *   ohne Richtung – Lightning CSS (Next 16 / Turbopack) verwirft solche Regeln.
+ */
 .hero-v2-overlay {
-  background:
-    linear-gradient(rgba(117, 150, 174, 0.18), rgba(117, 150, 174, 0.18)),
-    linear-gradient(rgba(41, 37, 36, 0.6), rgba(41, 37, 36, 0.6));
+  background-color: rgb(24 24 27 / 0.12);
+  background-image:
+    /* Warmer Grau-Beige-Wash über das gesamte Video – dominanter Ton,
+       sorgt für die ruhige, eintönig-professionelle Anmutung. */
+    linear-gradient(
+      180deg,
+      rgb(168 162 158 / 0.32) 0%,
+      rgb(168 162 158 / 0.32) 100%
+    ),
+    /* Vignette – spürbare Tiefe an den Rändern, lenkt zur Bildmitte. */
+    radial-gradient(
+      ellipse 115% 85% at 50% 44%,
+      rgb(24 24 27 / 0) 0%,
+      rgb(24 24 27 / 0.28) 100%
+    ),
+    /* Lesbarkeits-Verlauf: oben & unten klar gedimmt, Mitte atmet. */
+    linear-gradient(
+      180deg,
+      rgb(24 24 27 / 0.32) 0%,
+      rgb(24 24 27 / 0.06) 35%,
+      rgb(24 24 27 / 0.18) 65%,
+      rgb(24 24 27 / 0.5) 100%
+    );
 }
 
 .hero-v2-video--ready {
@@ -141,47 +183,75 @@ img {
   display: none;
 }
 
-.hero-v2-scroll-indicator {
-  animation: hero-scroll-hint 2.2s cubic-bezier(0.22, 1, 0.36, 1) infinite;
+.hero-v2-overlap-panels {
+  position: relative;
 }
 
-.hero-v2-scroll-indicator-dot {
-  animation: hero-scroll-dot 1.9s ease-in-out infinite;
+.hero-v2-overlap-panels__hero {
+  position: relative;
+  z-index: 10;
+  overflow: hidden;
 }
 
-@keyframes hero-scroll-hint {
-  0%,
-  100% {
-    transform: translateY(0);
+@media (max-width: 1023px), (hover: none), (pointer: coarse) {
+  .hero-v2-overlap-panels__hero {
+    position: sticky;
+    top: 0;
   }
-  50% {
-    transform: translateY(7px);
-  }
 }
 
-@keyframes hero-scroll-dot {
+.hero-v2-overlap-panels__hero-dark-overlay {
+  position: absolute;
+  inset: 0;
+  z-index: 40;
+  pointer-events: none;
+  background: #0a0a0a;
+  opacity: 0;
+  will-change: opacity;
+}
+
+.hero-v2-overlap-panels__next {
+  position: relative;
+  z-index: 20;
+  background: #fff;
+  will-change: transform;
+}
+
+/* Hero V2: Maus-nah „Scroll to explore“ – durchlaufender Glanz (sehr helles Weiß, System-Cursor bleibt sichtbar) */
+.hero-v2-scroll-explore__text {
+  background: linear-gradient(
+    100deg,
+    rgba(255, 255, 255, 0.88) 0%,
+    rgba(255, 255, 255, 0.88) 38%,
+    rgb(255, 255, 255) 50%,
+    rgba(255, 255, 255, 0.88) 62%,
+    rgba(255, 255, 255, 0.88) 100%
+  );
+  background-size: 220% 100%;
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+  text-shadow: 0 0 18px rgba(0, 0, 0, 0.35);
+  animation: hero-v2-scroll-explore-shimmer 2.6s linear infinite;
+}
+
+@keyframes hero-v2-scroll-explore-shimmer {
   0% {
-    transform: translateY(0);
-    opacity: 1;
-  }
-  65% {
-    transform: translateY(18px);
-    opacity: 0.25;
-  }
-  66% {
-    transform: translateY(0);
-    opacity: 0;
+    background-position: 100% 50%;
   }
   100% {
-    transform: translateY(0);
-    opacity: 1;
+    background-position: -100% 50%;
   }
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .hero-v2-scroll-indicator,
-  .hero-v2-scroll-indicator-dot {
+  .hero-v2-scroll-explore__text {
     animation: none;
+    background: none;
+    -webkit-background-clip: unset;
+    background-clip: unset;
+    color: #fff;
+    text-shadow: 0 0 14px rgba(0, 0, 0, 0.4);
   }
 }
 
@@ -241,4 +311,11 @@ select.contact-form-select {
   display: none;
 }
 
+/* Consent-Modal: nativer <dialog>::backdrop mit Blur + Abdunklung,
+   analog zum geöffneten Nav-Menü (bg-black/20 backdrop-blur-sm). */
+.consent-dialog::backdrop {
+  background-color: rgba(0, 0, 0, 0.35);
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+}
 

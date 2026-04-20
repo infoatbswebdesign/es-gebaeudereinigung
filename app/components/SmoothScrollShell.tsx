@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef } from "react";
+import { useLayoutEffect, useRef } from "react";
 import gsap from "gsap";
 import { ScrollTrigger } from "gsap/ScrollTrigger";
 import ScrollSmoother from "gsap/ScrollSmoother";
@@ -23,6 +23,15 @@ const SMOOTHER_FALLBACK_MEDIA =
 
 /**
  * ScrollSmoother-Wrapper: Inhalt in #smooth-content; fixierte Elemente (Navbar) außerhalb.
+ *
+ * Next.js-Best-Practice fuer Route-Transitions:
+ * - <Link> committed alte + neue Page synchron in einem React-Commit; es gibt
+ *   keinen sichtbaren "leeren" Frame. Daher KEIN visibility-Hack mehr.
+ * - Da der ScrollSmoother den Scroll per Transform auf #smooth-content simuliert
+ *   und `window.scrollY` aus Sicht des Browsers immer 0 ist, uebernimmt Next.js
+ *   das Top-Scrolling bei Navigation NICHT automatisch. Wir muessen den
+ *   Smoother synchron (vor Paint) auf 0 zuruecksetzen -> useLayoutEffect auf
+ *   den pathname.
  */
 export default function SmoothScrollShell({ children }: Props) {
   const rootRef = useRef<HTMLDivElement>(null);
@@ -34,6 +43,38 @@ export default function SmoothScrollShell({ children }: Props) {
 
   const buildScrollKey = () =>
     `${SCROLL_STORAGE_PREFIX}${window.location.pathname}${window.location.search}`;
+
+  /**
+   * Hart-Reset der Scroll-Position ohne sichtbare Animation.
+   * Das Ziel und die interpolierte "current"-Position des Smoothers werden
+   * gemeinsam auf 0 gesetzt, damit der naechste Paint die neue Seite bereits
+   * am Anfang zeigt (kein kurzes "Nachfedern").
+   */
+  const snapToTop = () => {
+    if (typeof window === "undefined") return;
+    const smoother = smootherRef.current;
+
+    if (smoother) {
+      const prevSmooth = smoother.smooth();
+      smoother.smooth(0);
+      smoother.scrollTop(0);
+      // Content-Transform hart setzen, falls der Smoother-Tick noch nicht
+      // gelaufen ist.
+      gsap.set("#smooth-content", { y: 0, force3D: true });
+      window.scrollTo(0, 0);
+      smoother.smooth(prevSmooth || 1);
+      ScrollTrigger.update();
+      return;
+    }
+
+    // Mobile / kein Smoother: nativer Scroll. scroll-behavior ist global auf
+    // "auto" gesetzt, daher springt scrollTo synchron.
+    const docEl = document.documentElement;
+    const previousBehavior = docEl.style.scrollBehavior;
+    docEl.style.scrollBehavior = "auto";
+    window.scrollTo(0, 0);
+    docEl.style.scrollBehavior = previousBehavior;
+  };
 
   useGSAP(
     () => {
@@ -58,7 +99,6 @@ export default function SmoothScrollShell({ children }: Props) {
         activeScrollKeyRef.current = initialKey;
         const savedY = Number(sessionStorage.getItem(initialKey) || "0");
         if (Number.isFinite(savedY) && savedY > 0) {
-          // sofortiger Jump ohne Animation, damit Reload exakt an letzter Position startet
           smoother.scrollTo(savedY, false);
           ScrollTrigger.update();
         }
@@ -82,7 +122,6 @@ export default function SmoothScrollShell({ children }: Props) {
         window.addEventListener("pagehide", persistScroll);
         window.addEventListener("beforeunload", persistScroll);
 
-        /* Navbar erst nach Initialisierung freigeben */
         let raf1 = 0;
         raf1 = requestAnimationFrame(() => {
           document.documentElement.classList.remove("ss-preinit");
@@ -121,23 +160,34 @@ export default function SmoothScrollShell({ children }: Props) {
     { scope: rootRef }
   );
 
-  useEffect(() => {
-    const smoother = smootherRef.current;
-    if (!smoother) return;
+  /**
+   * Scroll-Reset bei Routen-Wechsel.
+   *
+   * useLayoutEffect feuert synchron VOR dem naechsten Paint. React hat die
+   * neue Page bereits gemountet (der alte Baum ist weg, der neue da). Wir
+   * setzen Smoother und nativen Scroll auf 0 – der anschliessende Paint zeigt
+   * die neue Seite direkt am Anfang, ohne "Rueckscroll-Blitz".
+   *
+   * WICHTIG: Keine visibility-Hacks, kein globaler Click-Handler. Der React-
+   * Commit ist atomar – dazwischen ist nie ein "leerer Frame" sichtbar.
+   */
+  useLayoutEffect(() => {
+    if (typeof window === "undefined") return;
 
     const nextKey = buildScrollKey();
-    if (nextKey === activeScrollKeyRef.current) return;
-
-    // Vor dem Routentausch alte Route-Position sichern.
-    try {
-      if (activeScrollKeyRef.current) {
-        sessionStorage.setItem(activeScrollKeyRef.current, String(smoother.scrollTop()));
-      }
-    } catch {}
-
+    const isSameRoute = nextKey === activeScrollKeyRef.current;
     activeScrollKeyRef.current = nextKey;
-    smoother.scrollTo(0, false);
-    ScrollTrigger.update();
+
+    // Initialer Mount oder identische Route (z. B. nur searchParams-Init):
+    // nichts tun, sonst reiss-zurueck beim ersten Render.
+    if (isSameRoute) return;
+
+    // Hash-Links (/seite#anker) selbst steuern lassen – Browser / Next.js
+    // kuemmern sich um den scrollIntoView auf das Ziel-Id.
+    if (window.location.hash) return;
+
+    snapToTop();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [pathname, searchParams]);
 
   return (

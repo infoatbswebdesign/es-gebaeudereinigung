@@ -10,6 +10,6 @@ export const CONTACT_EMAIL = "info@es-gebäudeservice.de";
 /** Adresse (je Zeile: Firmenname, Straße, PLZ Ort) */
 export const CONTACT_ADDRESS_LINES = [
   "ES-Gebäudeservice",
-  "Hauptstr.111",
+  "Hauptstr. 111",
   "73730 Esslingen",
 ] as const;

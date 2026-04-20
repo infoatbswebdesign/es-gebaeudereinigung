@@ -4,38 +4,49 @@ import Image from "next/image";
 import { useRef, useState } from "react";
 import gsap from "gsap";
 import { useGSAP } from "@gsap/react";
+import {
+  putzfrauJobErledigt,
+  putzfrauLiestAngebot,
+  putzfrauVereinbartTermin,
+} from "@/app/assets/images";
 
 gsap.registerPlugin(useGSAP);
 
 const PROCESS_IMAGES = [
-  "/putzfrau-vereinbart-termin-es-gebeaudeservice.jpg",
-  "/putzfrau-liest-angebot-durch-es-gebaeudeservice.jpg",
-  "/putzfrau-hat-job-erledigt-es-gebaeudeservice.jpg",
+  putzfrauVereinbartTermin,
+  putzfrauLiestAngebot,
+  putzfrauJobErledigt,
+] as const;
+
+const PROCESS_IMAGE_ALTS = [
+  "Mitarbeiterin von ES Gebäudeservice vereinbart einen Besichtigungstermin für die Gebäudereinigung in Esslingen",
+  "Mitarbeiterin erstellt ein transparentes Reinigungsangebot für einen Kunden in Stuttgart",
+  "Reinigungskraft von ES Gebäudeservice nach erfolgreicher Unterhaltsreinigung in einem Büro in der Region Esslingen",
 ] as const;
 
 const STEPS = [
   {
     id: 1,
     number: "01",
-    title: "Termin vereinbaren",
+    title: "Kostenloser Besichtigungstermin vor Ort",
     description:
-      "Sie kontaktieren uns – wir besprechen Ihre Wünsche und vereinbaren einen unverbindlichen Besichtigungstermin vor Ort.",
+      "Sie kontaktieren uns telefonisch oder per Kontaktformular. Wir besprechen Ihre Wünsche und vereinbaren einen unverbindlichen Besichtigungstermin für Ihre Gebäudereinigung in Esslingen, Stuttgart oder der Region.",
     readMoreHref: "/kontakt",
   },
   {
     id: 2,
     number: "02",
-    title: "Individuelles Angebot",
+    title: "Individuelles Reinigungsangebot",
     description:
-      "Nach der Begehung erstellen wir Ihnen ein maßgeschneidertes, transparentes Angebot – ganz ohne versteckte Kosten.",
+      "Nach der Begehung vor Ort erstellen wir Ihnen ein maßgeschneidertes, transparentes Angebot für Ihre Unterhaltsreinigung, Glasreinigung oder Grundreinigung. Fair kalkuliert und ganz ohne versteckte Kosten.",
     readMoreHref: "/leistungen",
   },
   {
     id: 3,
     number: "03",
-    title: "Reinigung erledigt!",
+    title: "Zuverlässige Reinigung vor Ort",
     description:
-      "Unser Team kommt pünktlich zum Einsatz und sorgt für gründliche Sauberkeit – zuverlässig, effizient und diskret.",
+      "Unser eingespieltes Reinigungsteam kommt pünktlich zum Einsatz in Esslingen, Stuttgart und Umgebung. Wir sorgen für gründliche Sauberkeit in Büros, Praxen und Gewerbeobjekten. Zuverlässig, effizient und diskret.",
     readMoreHref: "/leistungen",
   },
 ] as const;
@@ -150,11 +161,12 @@ export default function ProcessSection() {
             id="process-heading"
             className="max-w-2xl text-2xl font-bold leading-snug tracking-tight text-slate-900 md:text-3xl lg:text-4xl"
           >
-            Unser Vorgehen
+            Unser Vorgehen für Ihre Gebäudereinigung in Esslingen und Stuttgart
           </h2>
           <p className="max-w-md text-base leading-relaxed text-slate-600 md:text-lg">
-            In drei klaren Schritten zum Reinigungsauftrag: von der ersten
-            Kontaktaufnahme bis zur zuverlässigen Ausführung – transparent und
+            In drei klaren Schritten zur professionellen Reinigung in Esslingen,
+            Stuttgart und der gesamten Region. Von der ersten Kontaktaufnahme
+            bis zur zuverlässigen Ausführung arbeiten wir transparent und
             unkompliziert.
           </p>
         </div>
@@ -198,14 +210,15 @@ export default function ProcessSection() {
                 </span>
                 {/* Bild darunter – next/image mit width/height (Platz reserviert, kein Layout-Shift) */}
                 <div
-                  className="relative mt-4 h-[128px] w-[160px] overflow-hidden rounded-lg border-2 border-dashed border-slate-300 bg-slate-100"
+                  className="relative mt-4 h-[128px] w-[160px] overflow-hidden rounded-lg bg-slate-100"
                 >
                   <Image
                     src={PROCESS_IMAGES[index]}
-                    alt=""
+                    alt={PROCESS_IMAGE_ALTS[index]}
                     width={160}
                     height={128}
                     sizes="160px"
+                    placeholder="blur"
                     className="h-full w-full object-cover"
                   />
                 </div>
@@ -227,11 +240,12 @@ export default function ProcessSection() {
         {/* Mobil: Titel + Intro + horizontale Snap-Scroll-Cards – Schrift wie ÜberUns */}
         <div className="mt-10 md:mt-0 md:hidden">
           <h2 className="text-2xl font-bold leading-snug tracking-tight text-slate-900">
-            Unser Vorgehen
+            Unser Vorgehen für Ihre Gebäudereinigung in Esslingen und Stuttgart
           </h2>
           <p className="mt-3 text-base leading-relaxed text-slate-600">
-            In drei klaren Schritten zum Reinigungsauftrag: von der ersten
-            Kontaktaufnahme bis zur zuverlässigen Ausführung – transparent und
+            In drei klaren Schritten zur professionellen Reinigung in Esslingen,
+            Stuttgart und der gesamten Region. Von der ersten Kontaktaufnahme
+            bis zur zuverlässigen Ausführung arbeiten wir transparent und
             unkompliziert.
           </p>
           <div
@@ -265,10 +279,11 @@ export default function ProcessSection() {
                 >
                   <Image
                     src={PROCESS_IMAGES[index]}
-                    alt=""
+                    alt={PROCESS_IMAGE_ALTS[index]}
                     width={200}
                     height={150}
                     sizes="200px"
+                    placeholder="blur"
                     className="h-full w-full object-cover"
                   />
                 </div>

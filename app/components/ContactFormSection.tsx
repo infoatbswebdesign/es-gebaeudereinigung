@@ -1,98 +1,104 @@
 "use client";
 
+import Image, { type StaticImageData } from "next/image";
 import Link from "next/link";
-import { FormEvent, useEffect, useMemo, useRef, useState } from "react";
+import {
+  FormEvent,
+  startTransition,
+  useActionState,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+} from "react";
 import {
   CONTACT_ADDRESS_LINES,
   CONTACT_EMAIL,
   CONTACT_PHONE_DISPLAY,
   CONTACT_PHONE_TEL,
 } from "@/app/contact";
+import { sendContact } from "@/app/actions/send-contact";
+import { BTN_PRIMARY_SUBMIT } from "@/app/components/buttonStyles";
+import type { ContactState } from "@/lib/contact-schema";
+import { useToastStore } from "@/lib/toast-store";
+import {
+  baugrobreinigung,
+  entruempelung,
+  gebaeudeservice,
+  glasreinigung,
+  gruenanlageflaechen,
+  grundreinigung,
+  kehrwochen,
+  reinigungsservice,
+  unterhaltsreinigung,
+  winterdienst,
+} from "@/app/assets/images";
 
-type ServiceType = "Reinigungsservice" | "Winterdienst" | "Gebäudeservice" | "";
-type Step = 1 | 2 | 3;
+const INITIAL_ACTION_STATE: ContactState = { ok: false };
+
 type ErrorMap = Partial<Record<FieldName, string>>;
 
 type FormDataState = {
-  service: ServiceType;
+  services: string[];
   postalCode: string;
   city: string;
   federalState: string;
   company: string;
-  contactName: string;
+  firstName: string;
+  lastName: string;
   email: string;
   phone: string;
   description: string;
-  wantsCallback: boolean;
-  callbackWindow: string;
-  callbackDays: string[];
-  callbackFrom: string;
-  callbackTo: string;
-  desiredStartDate: string;
-  cleaningObjectType: string;
-  cleaningArea: string;
-  cleaningFrequency: string;
-  cleaningHygiene: string[];
-  winterAreas: string[];
-  winterWindow: string;
-  winterOnCall: boolean;
-  buildingModules: string[];
   privacyConsent: boolean;
   hpWebsite: string;
 };
 
 type FieldName =
-  | "service"
+  | "services"
   | "postalCode"
-  | "company"
-  | "contactName"
+  | "firstName"
+  | "lastName"
   | "email"
   | "phone"
   | "description"
-  | "callbackWindow"
   | "privacyConsent";
 
 const MAX_DESCRIPTION_LENGTH = 1500;
-const MIN_DESCRIPTION_LENGTH = 30;
+const MIN_DESCRIPTION_LENGTH = 10;
+
 const DEFAULT_FORM_DATA: FormDataState = {
-  service: "",
+  services: [],
   postalCode: "",
   city: "",
   federalState: "",
   company: "",
-  contactName: "",
+  firstName: "",
+  lastName: "",
   email: "",
   phone: "",
   description: "",
-  wantsCallback: false,
-  callbackWindow: "",
-  callbackDays: [],
-  callbackFrom: "",
-  callbackTo: "",
-  desiredStartDate: "",
-  cleaningObjectType: "",
-  cleaningArea: "",
-  cleaningFrequency: "",
-  cleaningHygiene: [],
-  winterAreas: [],
-  winterWindow: "",
-  winterOnCall: false,
-  buildingModules: [],
   privacyConsent: false,
   hpWebsite: "",
 };
-/** Einheitliche Höhe (h-10), Ecken (rounded-lg), Rand – Inputs & Trigger-Buttons im Kontaktformular */
+
+/**
+ * Einheitliche Hoehe (h-10), Ecken (rounded-lg), Rand – Inputs im Kontaktformular.
+ *
+ * Wichtig: `text-base md:text-sm` (= 16px Mobile / 14px Desktop).
+ * iOS Safari + iOS Chrome zoomen beim Fokus automatisch in jedes Input,
+ * dessen effektive `font-size` < 16px ist. Mit 16px auf Mobile wird genau
+ * dieser ungewollte Zoom verhindert, ohne das User-Pinch-Zoom global zu
+ * deaktivieren (das waere ein A11y-Antipattern). Auf md+ schalten wir
+ * wieder auf das kompaktere 14px-Layout um.
+ */
 const CONTACT_FIELD_CONTROL_CLASS =
-  "box-border h-11 w-full min-w-0 rounded-lg border border-slate-200 bg-white px-3 text-lg text-slate-900 outline-none transition placeholder:text-slate-500 focus:border-slate-200 focus:ring-0 focus-visible:outline-none disabled:cursor-not-allowed disabled:bg-slate-100";
+  "box-border h-10 w-full min-w-0 rounded-lg border border-slate-200 bg-white px-3 text-base text-slate-900 outline-none transition placeholder:text-slate-500 focus:border-slate-200 focus:ring-0 focus-visible:outline-none disabled:cursor-not-allowed disabled:bg-slate-100 md:text-sm";
 
 const CONTACT_SELECT_BASE_CLASS =
-  "contact-form-select box-border h-11 w-full min-w-0 appearance-none rounded-lg border border-slate-200 bg-white px-3 pr-9 text-lg text-slate-900 outline-none transition focus:border-slate-200 focus:ring-0 focus-visible:outline-none disabled:cursor-not-allowed disabled:bg-slate-100";
-
-const CONTACT_STEP2_SELECT_FIELD_CLASS =
-  "mt-1.5 contact-form-select box-border h-11 w-full min-w-0 appearance-none rounded-lg border border-slate-200 bg-white px-3 pr-9 text-lg text-slate-900 outline-none transition disabled:cursor-not-allowed disabled:bg-slate-100";
+  "contact-form-select box-border h-10 w-full min-w-0 appearance-none rounded-lg border border-slate-200 bg-white px-3 pr-9 text-base text-slate-900 outline-none transition focus:border-slate-200 focus:ring-0 focus-visible:outline-none disabled:cursor-not-allowed disabled:bg-slate-100 md:text-sm";
 
 const CONTACT_TEXTAREA_FIELD_CLASS =
-  "mt-1.5 max-h-[min(28vh,9rem)] min-h-18 w-full resize-none rounded-lg border border-slate-200 bg-white px-3 py-2 text-lg text-slate-900 outline-none transition placeholder:text-sm focus:border-slate-200 focus:ring-0 focus-visible:outline-none disabled:cursor-not-allowed disabled:bg-slate-100 lg:max-h-none lg:min-h-0";
+  "mt-1 min-h-14 w-full resize-none rounded-lg border border-slate-200 bg-white px-3 py-2 text-base text-slate-900 outline-none transition placeholder:text-slate-500 focus:border-slate-200 focus:ring-0 focus-visible:outline-none disabled:cursor-not-allowed disabled:bg-slate-100 md:min-h-16 md:text-sm";
 
 type OpenPlzLocality = {
   name: string;
@@ -109,15 +115,32 @@ const DOMAIN_TYPOS: Record<string, string> = {
 };
 
 const FIELD_ORDER: FieldName[] = [
-  "service",
-  "postalCode",
-  "company",
-  "contactName",
+  "firstName",
+  "lastName",
   "email",
   "phone",
+  "postalCode",
+  "services",
   "description",
-  "callbackWindow",
   "privacyConsent",
+];
+
+/**
+ * Alle 10 Leistungen mit zugeordnetem Bild.
+ * Die Bilder sind die aktuell vorhandenen Assets aus /public –
+ * fuer einzelne Eintraege koennten spaeter passendere Motive ergaenzt werden.
+ */
+const SERVICE_OPTIONS: Array<{ value: string; image: StaticImageData }> = [
+  { value: "Kehrwochen", image: kehrwochen },
+  { value: "Hausmeisterservice", image: gebaeudeservice },
+  { value: "Winterdienst", image: winterdienst },
+  { value: "Unterhaltsreinigung", image: unterhaltsreinigung },
+  { value: "Praxis- & Büroreinigung", image: reinigungsservice },
+  { value: "Grundreinigung", image: grundreinigung },
+  { value: "Glasreinigung", image: glasreinigung },
+  { value: "Baugrobreinigung", image: baugrobreinigung },
+  { value: "Grünanlagenflächen", image: gruenanlageflaechen },
+  { value: "Entrümpelung", image: entruempelung },
 ];
 
 function clsx(...classes: Array<string | false | undefined>) {
@@ -136,48 +159,50 @@ function pushAnalyticsEvent(name: string, params: Record<string, string | number
 }
 
 function validateField(data: FormDataState, field: FieldName): string {
-  const value = data[field];
   switch (field) {
-    case "service":
-      return data.service ? "" : "Bitte wählen Sie eine Leistung aus.";
+    case "services":
+      return data.services.length > 0
+        ? ""
+        : "Bitte waehlen Sie mindestens eine Leistung aus.";
     case "postalCode":
-      return data.postalCode.trim() && data.city.trim() ? "" : "Bitte geben Sie PLZ und Ort an.";
-    case "company":
-      return data.company.trim().length >= 2 ? "" : "Bitte geben Sie den Unternehmensnamen an.";
-    case "contactName":
-      return data.contactName.trim().length >= 2 ? "": "Bitte geben Sie Ihren Namen an.";
+      return data.postalCode.trim() && data.city.trim()
+        ? ""
+        : "Bitte geben Sie PLZ und Ort an.";
+    case "firstName":
+      return data.firstName.trim().length >= 2
+        ? ""
+        : "Bitte geben Sie Ihren Vornamen an.";
+    case "lastName":
+      return data.lastName.trim().length >= 2
+        ? ""
+        : "Bitte geben Sie Ihren Nachnamen an.";
     case "email": {
       const email = data.email.trim();
       const isValid = /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
       return isValid
         ? ""
-        : "Bitte geben Sie eine gültige E-Mail-Adresse an (z. B. name@unternehmen.de).";
+        : "Bitte geben Sie eine gueltige E-Mail-Adresse an (z. B. name@unternehmen.de).";
     }
     case "phone":
       if (!data.phone.trim()) return "";
       return /^[+()\-.\s0-9]{6,25}$/.test(data.phone.trim())
         ? ""
-        : "Bitte geben Sie eine gültige Telefonnummer an.";
-    case "description":
+        : "Bitte geben Sie eine gueltige Telefonnummer an.";
+    case "description": {
+      const value = data.description.trim();
+      if (value.length === 0) {
+        return "Bitte beschreiben Sie kurz das Objekt (z. B. Treppenhaus mit 4 Stockwerken).";
+      }
+      if (value.length < MIN_DESCRIPTION_LENGTH) {
+        return `Bitte beschreiben Sie das Objekt mit mindestens ${MIN_DESCRIPTION_LENGTH} Zeichen.`;
+      }
       return "";
-    case "callbackWindow":
-      if (!data.wantsCallback) return "";
-      return data.callbackWindow.trim().length > 0 ? "" : "Bitte geben Sie einen bevorzugten Zeitraum an.";
+    }
     case "privacyConsent":
       return data.privacyConsent ? "" : "Bitte stimmen Sie der Verarbeitung Ihrer Angaben zu.";
     default:
       return "";
   }
-}
-
-function getVisibleFields(step: Step, data: FormDataState): FieldName[] {
-  if (step === 1) return ["service", "postalCode"];
-  if (step === 2) return [];
-  return FIELD_ORDER.filter(
-    (field) =>
-      !["service", "postalCode", "city"].includes(field) &&
-      (field !== "callbackWindow" || data.wantsCallback),
-  );
 }
 
 function getEmailTypoHint(email: string): string {
@@ -187,442 +212,308 @@ function getEmailTypoHint(email: string): string {
   return candidate ? `Meinen Sie ${parts[0]}@${candidate}?` : "";
 }
 
-function PhoneIcon() {
+function Label({
+  htmlFor,
+  text,
+  required = false,
+  optional = false,
+}: {
+  htmlFor: string;
+  text: string;
+  required?: boolean;
+  optional?: boolean;
+}) {
   return (
-    <svg className="h-5 w-5 shrink-0 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden>
-      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 5a2 2 0 012-2h3.28a1 1 0 01.948.684l1.498 4.493a1 1 0 01-.502 1.21l-2.257 1.13a11.042 11.042 0 005.516 5.516l1.13-2.257a1 1 0 011.21-.502l4.493 1.498a1 1 0 01.684.949V21a2 2 0 01-2 2h-2C7.82 23 2 17.18 2 10V5z" />
-    </svg>
-  );
-}
-
-function Label({ htmlFor, text, required = false, optional = false }: { htmlFor: string; text: string; required?: boolean; optional?: boolean }) {
-  return (
-    <label htmlFor={htmlFor} className="block text-base font-semibold text-white">
-      {text} {required && <span aria-hidden>*</span>} {optional && <span className="font-normal text-white/85">(optional)</span>}
+    <label htmlFor={htmlFor} className="block text-sm font-semibold text-white">
+      {text} {required && <span aria-hidden>*</span>}
+      {optional && <span className="font-normal text-white/80">(opt.)</span>}
     </label>
   );
 }
 
-function TrustBlock() {
+/**
+ * Reservierter, hoehengleicher Slot direkt unter Eingabefeldern.
+ *
+ * - `min-h-[1.125rem]` haelt den Platz frei, auch wenn keine Meldung
+ *   vorliegt → kein Layout-Shift, wenn Errors / Hints erscheinen.
+ * - Meldungen werden als Pille gerendert (`bg-red-600` / `bg-amber-500`),
+ *   damit sie auf dem semitransparenten Glas-Hintergrund sofort lesbar
+ *   sind (vorher war `text-red-100` quasi unsichtbar).
+ */
+function FieldMessage({
+  id,
+  message,
+  hint,
+}: {
+  id?: string;
+  message?: string;
+  hint?: string;
+}) {
   return (
-    <aside className="rounded-xl bg-white/15 p-4 text-white backdrop-blur-xl">
-      <h4 className="text-base font-semibold">Darum vertrauen uns Unternehmen</h4>
-      <ul className="mt-3 space-y-2 text-sm text-white/90">
-        <li>Antwort innerhalb von 1 Werktag</li>
-        <li>Über 200 betreute Objekte</li>
-        <li>Professionelle Teams für Reinigung, Winterdienst und Gebäudeservice</li>
-      </ul>
+    <div className="mt-1 flex min-h-4 flex-wrap gap-x-2 gap-y-0.5">
+      {hint ? (
+        <span className="inline-flex max-w-full items-center rounded-sm bg-amber-500/95 px-1.5 py-0.5 text-[11px] font-semibold leading-none text-white shadow-sm shadow-black/20">
+          {hint}
+        </span>
+      ) : null}
+      {message ? (
+        <span
+          id={id}
+          role="alert"
+          className="inline-flex max-w-full items-center rounded-sm bg-red-600/95 px-1.5 py-0.5 text-[11px] font-semibold leading-none text-white shadow-sm shadow-black/20"
+        >
+          {message}
+        </span>
+      ) : null}
+    </div>
+  );
+}
+
+/** Roter Border + leichter Ring fuer Inputs mit Validierungsfehler. */
+function fieldClass(hasError?: boolean) {
+  return clsx(
+    "mt-1",
+    CONTACT_FIELD_CONTROL_CLASS,
+    hasError && "border-red-500 ring-1 ring-red-500/40 focus:border-red-500",
+  );
+}
+
+/**
+ * Sidebar nur fuer Desktop (lg+) neben dem Formular.
+ *
+ * Ziel: emotional abholen, Hemmschwelle senken, Vertrauen aufbauen.
+ * Keine reine Info-Liste mehr, sondern eine geschlossene Erzaehlung
+ * (Versprechen → Beweise → Prozess → Direktkontakt).
+ *
+ * Aufbau (oben → unten):
+ * 1. Promise-Hero: konkretes Antwort-Versprechen ("24h").
+ * 2. Trust-Liste mit Check-Icons – fokussiert auf Nutzen statt Features.
+ * 3. Mini-Prozess (3 Schritte) – nimmt Unsicherheit ("Was passiert danach?").
+ * 4. Direktkontakt-Karte – fuer Nutzer, die lieber telefonieren.
+ *
+ * Hoehe: gesamte Sidebar passt in die verfuegbare Restspalte (lg-Layout
+ * teilt 1.25fr / 1fr). Wir vermeiden Overflow ueber `overflow-hidden`
+ * am Wrapper + kompakte Paddings.
+ */
+function ContactSidebar() {
+  const TRUST_POINTS = [
+    "Kostenloses, transparentes Angebot",
+    "Persoenliche Besichtigung vor Ort",
+    "Feste Teams – keine Subunternehmer",
+    "Ueber 200 betreute Objekte in der Region",
+  ];
+
+  const PROCESS_STEPS = [
+    { title: "Anfrage senden", text: "In 2 Minuten ausgefuellt." },
+    { title: "Wir besichtigen", text: "Termin nach Ihrem Kalender." },
+    { title: "Faires Angebot", text: "Schriftlich und unverbindlich." },
+  ];
+
+  return (
+    <aside className="flex min-h-0 flex-1 flex-col gap-3 text-white">
+      <div className="flex min-h-0 flex-1 flex-col gap-4 overflow-hidden rounded-2xl bg-white/15 p-5 backdrop-blur-xl ring-1 ring-white/15">
+        <div>
+          <span className="inline-flex items-center gap-1.5 rounded-full bg-white/20 px-2.5 py-1 text-[11px] font-semibold uppercase tracking-wider text-white">
+            <span className="h-1.5 w-1.5 rounded-full bg-emerald-300" aria-hidden />
+            Kurze Antwortzeit
+          </span>
+          <h3 className="mt-3 text-xl font-bold leading-tight">
+            Persoenlich. Unverbindlich. Aus Esslingen.
+          </h3>
+          <p className="mt-1.5 text-sm leading-relaxed text-white/85">
+            Schreiben Sie uns Ihr Anliegen – wir melden uns mit einem
+            transparenten Angebot zurueck. Kein Aussendienst, keine Vertrags&shy;tricks.
+          </p>
+        </div>
+
+        <div className="h-px w-full bg-white/15" aria-hidden />
+
+        <div>
+          <p className="text-xs font-semibold uppercase tracking-wider text-white/70">
+            Was Sie bekommen
+          </p>
+          <ul className="mt-2 space-y-1.5 text-sm leading-snug text-white/95">
+            {TRUST_POINTS.map((point) => (
+              <li key={point} className="flex items-start gap-2">
+                <svg
+                  className="mt-0.5 h-4 w-4 shrink-0 text-emerald-300"
+                  viewBox="0 0 20 20"
+                  fill="currentColor"
+                  aria-hidden
+                >
+                  <path
+                    fillRule="evenodd"
+                    d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 111.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z"
+                    clipRule="evenodd"
+                  />
+                </svg>
+                <span>{point}</span>
+              </li>
+            ))}
+          </ul>
+        </div>
+
+        <div className="h-px w-full bg-white/15" aria-hidden />
+
+        <div>
+          <p className="text-xs font-semibold uppercase tracking-wider text-white/70">
+            So geht es weiter
+          </p>
+          <ol className="mt-2 space-y-2">
+            {PROCESS_STEPS.map((step, index) => (
+              <li key={step.title} className="flex items-start gap-3">
+                <span
+                  aria-hidden
+                  className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-white text-xs font-bold text-[#2A4961]"
+                >
+                  {index + 1}
+                </span>
+                <div className="min-w-0">
+                  <p className="text-sm font-semibold leading-tight text-white">
+                    {step.title}
+                  </p>
+                  <p className="text-xs leading-snug text-white/75">
+                    {step.text}
+                  </p>
+                </div>
+              </li>
+            ))}
+          </ol>
+        </div>
+      </div>
+
+      <div className="rounded-2xl bg-white/15 p-4 text-white backdrop-blur-xl ring-1 ring-white/15">
+        <p className="text-xs font-semibold uppercase tracking-wider text-white/70">
+          Lieber direkt sprechen?
+        </p>
+        <div className="mt-2 grid grid-cols-1 gap-1.5 text-sm">
+          <a
+            href={`tel:${CONTACT_PHONE_TEL}`}
+            onClick={() => pushAnalyticsEvent("call_click", {})}
+            className="group inline-flex items-center gap-2 font-semibold text-white underline-offset-4 hover:underline"
+          >
+            <svg
+              className="h-4 w-4 text-white/80 transition-colors group-hover:text-white"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              strokeWidth={2}
+              aria-hidden
+            >
+              <path
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                d="M3 5a2 2 0 012-2h2.28a1 1 0 01.95.68l1.5 4.5a1 1 0 01-.5 1.21l-1.86.93a11 11 0 005.4 5.4l.93-1.86a1 1 0 011.21-.5l4.5 1.5a1 1 0 01.68.95V19a2 2 0 01-2 2h-1C9.72 21 3 14.28 3 6V5z"
+              />
+            </svg>
+            {CONTACT_PHONE_DISPLAY}
+          </a>
+          <a
+            href={`mailto:${CONTACT_EMAIL}`}
+            className="group inline-flex items-center gap-2 break-all text-white/95 underline-offset-4 hover:underline"
+          >
+            <svg
+              className="h-4 w-4 shrink-0 text-white/80 transition-colors group-hover:text-white"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              strokeWidth={2}
+              aria-hidden
+            >
+              <path
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                d="M3 7a2 2 0 012-2h14a2 2 0 012 2v10a2 2 0 01-2 2H5a2 2 0 01-2-2V7zm0 0l9 6 9-6"
+              />
+            </svg>
+            {CONTACT_EMAIL}
+          </a>
+        </div>
+        <p className="mt-3 text-[11px] leading-snug text-white/65">
+          {CONTACT_ADDRESS_LINES[0]} · Hauptstr. 111, 73730 Esslingen
+        </p>
+      </div>
     </aside>
   );
 }
 
-const WEEKDAY_LABELS = ["Mo", "Di", "Mi", "Do", "Fr", "Sa", "So"];
-const MONTH_LABELS = [
-  "Januar",
-  "Februar",
-  "März",
-  "April",
-  "Mai",
-  "Juni",
-  "Juli",
-  "August",
-  "September",
-  "Oktober",
-  "November",
-  "Dezember",
-];
-const SERVICE_OPTIONS: Array<{ value: Exclude<ServiceType, "">; image: string }> = [
-  {
-    value: "Reinigungsservice",
-    image: "/reinigungsservice-es-gebaeudeservice.jpg",
-  },
-  {
-    value: "Winterdienst",
-    image: "/winterdienst-es-gebaeudeservice.jpg",
-  },
-  {
-    value: "Gebäudeservice",
-    image: "/gebaeudeservice-es-gebaeudeservice.jpg",
-  },
-];
-const CLEANING_HYGIENE_OPTIONS: Array<{ value: string; image: string }> = [
-  { value: "Standard", image: "/reinigungsservice-es-gebaeudeservice.jpg" },
-  { value: "Lebensmittel", image: "/lebensmittelbranche-reinigung-es-gebaeudeservice.jpeg" },
-  { value: "Medizin", image: "/reinigungsservice-es-gebaeudeservice.jpg" },
-  { value: "Reinraum", image: "/reinigungsservice-es-gebaeudeservice.jpg" },
-];
-const WINTER_AREA_OPTIONS: Array<{ value: string; image: string }> = [
-  { value: "Gehwege", image: "/winterdienst-gehweg-es-gebaeudeservice.jpeg" },
-  { value: "Zufahrten", image: "/winterdienst-es-gebaeudeservice.jpg" },
-  { value: "Parkflächen", image: "/winterdienst-es-gebaeudeservice.jpg" },
-  { value: "Dachflächen", image: "/winterdienst-es-gebaeudeservice.jpg" },
-];
-const BUILDING_MODULE_OPTIONS: Array<{ value: string; image: string }> = [
-  { value: "Hausmeister", image: "/gebaeudeservice-es-gebaeudeservice.jpg" },
-  { value: "Kleinreparaturen", image: "/gebaeudeservice-es-gebaeudeservice.jpg" },
-  { value: "Grünpflege", image: "/gebaeudeservice-es-gebaeudeservice.jpg" },
-  { value: "Sonstiges", image: "/gebaeudeservice-es-gebaeudeservice.jpg" },
-];
-const CALLBACK_WEEKDAYS = ["Mo", "Di", "Mi", "Do", "Fr", "Sa"];
-
-function toIsoDate(date: Date): string {
-  const year = date.getFullYear();
-  const month = String(date.getMonth() + 1).padStart(2, "0");
-  const day = String(date.getDate()).padStart(2, "0");
-  return `${year}-${month}-${day}`;
-}
-
-function parseIsoDate(value: string): Date | null {
-  if (!value) return null;
-  const [yearStr, monthStr, dayStr] = value.split("-");
-  const year = Number(yearStr);
-  const month = Number(monthStr);
-  const day = Number(dayStr);
-  if (!year || !month || !day) return null;
-  return new Date(year, month - 1, day);
-}
-
-function ModernDatePicker({
-  id,
-  value,
-  onChange,
-}: {
-  id: string;
-  value: string;
-  onChange: (nextValue: string) => void;
-}) {
-  const selectedDate = parseIsoDate(value);
-  const [isOpen, setIsOpen] = useState(false);
-  const [useNativeDateInput, setUseNativeDateInput] = useState(false);
-  const [visibleMonth, setVisibleMonth] = useState<Date>(
-    selectedDate ? new Date(selectedDate.getFullYear(), selectedDate.getMonth(), 1) : new Date(new Date().getFullYear(), new Date().getMonth(), 1),
-  );
-  const wrapperRef = useRef<HTMLDivElement | null>(null);
-
-  useEffect(() => {
-    if (typeof window === "undefined") return;
-    setUseNativeDateInput(window.matchMedia("(hover: none), (pointer: coarse)").matches);
-  }, []);
-
-  useEffect(() => {
-    if (selectedDate) {
-      setVisibleMonth(new Date(selectedDate.getFullYear(), selectedDate.getMonth(), 1));
-    }
-  }, [value]);
-
-  useEffect(() => {
-    function handleClickOutside(event: MouseEvent) {
-      if (!wrapperRef.current) return;
-      if (!wrapperRef.current.contains(event.target as Node)) {
-        setIsOpen(false);
-      }
-    }
-    if (isOpen) {
-      document.addEventListener("mousedown", handleClickOutside);
-    }
-    return () => document.removeEventListener("mousedown", handleClickOutside);
-  }, [isOpen]);
-
-  const year = visibleMonth.getFullYear();
-  const monthIndex = visibleMonth.getMonth();
-  const monthStart = new Date(year, monthIndex, 1);
-  const firstWeekday = (monthStart.getDay() + 6) % 7;
-  const gridStart = new Date(year, monthIndex, 1 - firstWeekday);
-  const dayCells = Array.from({ length: 42 }, (_, index) => {
-    const date = new Date(gridStart);
-    date.setDate(gridStart.getDate() + index);
-    return {
-      iso: toIsoDate(date),
-      day: date.getDate(),
-      isCurrentMonth: date.getMonth() === monthIndex,
-      month: date.getMonth(),
-      year: date.getFullYear(),
-    };
-  });
-
-  const selectedIso = selectedDate ? toIsoDate(selectedDate) : "";
-
-  if (useNativeDateInput) {
-    return (
-      <div className="relative w-full max-w-[min(100%,calc(17ch+2.75rem))]">
-        <input
-          id={id}
-          type="date"
-          value={value}
-          onChange={(event) => onChange(event.target.value)}
-          className={clsx(
-            CONTACT_FIELD_CONTROL_CLASS,
-            "contact-form-date-input scheme-light block",
-            !value && "text-transparent caret-transparent",
-          )}
-        />
-        {!value && (
-          <span
-            className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-sm leading-none text-slate-500"
-            aria-hidden
-          >
-            Datum auswählen
-          </span>
-        )}
-      </div>
-    );
-  }
-
-  return (
-    <div ref={wrapperRef} className="relative w-full max-w-[min(100%,calc(17ch+4.25rem))]">
-      <button
-        type="button"
-        onClick={() => setIsOpen((prev) => !prev)}
-        className={clsx(
-          CONTACT_FIELD_CONTROL_CLASS,
-          "text-sm! flex w-full min-w-0 cursor-pointer items-center justify-between gap-1 text-left",
-        )}
-        aria-haspopup="dialog"
-        aria-expanded={isOpen}
-      >
-        <span className={clsx(!selectedDate && "text-slate-500")}>
-          {selectedDate
-            ? `${String(selectedDate.getDate()).padStart(2, "0")}.${String(selectedDate.getMonth() + 1).padStart(2, "0")}.${selectedDate.getFullYear()}`
-            : "Datum auswählen"}
-        </span>
-        <span aria-hidden>📅</span>
-      </button>
-
-      {isOpen && (
-        <div
-          role="dialog"
-          aria-label="Datum auswählen"
-          className="absolute bottom-full left-0 z-30 mb-2 w-[320px] max-w-[calc(100vw-3rem)] rounded-xl border border-slate-200 bg-white p-3 text-slate-900 shadow-xl"
-        >
-          <div className="mb-3 flex items-center justify-between">
-            <button
-              type="button"
-              onClick={() => setVisibleMonth(new Date(year, monthIndex - 1, 1))}
-              className="cursor-pointer rounded-full p-2 text-slate-600 transition hover:bg-slate-100"
-              aria-label="Vorheriger Monat"
-            >
-              ←
-            </button>
-            <p className="text-base font-semibold text-[#2A4961]">
-              {MONTH_LABELS[monthIndex]} {year}
-            </p>
-            <button
-              type="button"
-              onClick={() => setVisibleMonth(new Date(year, monthIndex + 1, 1))}
-              className="cursor-pointer rounded-full p-2 text-slate-600 transition hover:bg-slate-100"
-              aria-label="Nächster Monat"
-            >
-              →
-            </button>
-          </div>
-
-          <div className="grid grid-cols-7 gap-1.5 text-center text-xs font-semibold text-slate-500">
-            {WEEKDAY_LABELS.map((day) => (
-              <span key={day}>{day}</span>
-            ))}
-          </div>
-
-          <div className="mt-1.5 grid grid-cols-7 gap-1.5">
-            {dayCells.map((cell) => {
-              const isSelected = cell.iso === selectedIso;
-              const isToday = cell.iso === toIsoDate(new Date());
-              return (
-                <button
-                  key={cell.iso}
-                  type="button"
-                  onClick={() => {
-                    onChange(cell.iso);
-                    setIsOpen(false);
-                  }}
-                  className={clsx(
-                    "h-9 w-9 cursor-pointer rounded-full text-sm font-semibold transition",
-                    isSelected
-                      ? "bg-[#7596AE] text-white shadow-md"
-                      : cell.isCurrentMonth
-                        ? "text-slate-700 hover:bg-slate-100"
-                        : "text-slate-400 hover:bg-slate-100",
-                    isToday && !isSelected && "ring-2 ring-[#7596AE]/60",
-                  )}
-                  aria-pressed={isSelected}
-                  aria-label={`Datum ${cell.day}.${cell.month + 1}.${cell.year} auswählen`}
-                >
-                  {cell.day}
-                </button>
-              );
-            })}
-          </div>
-        </div>
-      )}
-
-      <input id={id} type="hidden" value={value} readOnly />
-    </div>
-  );
-}
-
-const TIME_SLOTS = Array.from({ length: 24 }, (_, index) => {
-  const hour = 7 + Math.floor(index / 2);
-  const minute = index % 2 === 0 ? "00" : "30";
-  return `${String(hour).padStart(2, "0")}:${minute}`;
-});
-
-function ModernTimePicker({
-  id,
-  value,
-  disabled,
-  onChange,
-}: {
-  id: string;
-  value: string;
-  disabled?: boolean;
-  onChange: (nextValue: string) => void;
-}) {
-  const [isOpen, setIsOpen] = useState(false);
-  const wrapperRef = useRef<HTMLDivElement | null>(null);
-
-  useEffect(() => {
-    function handleClickOutside(event: MouseEvent) {
-      if (!wrapperRef.current) return;
-      if (!wrapperRef.current.contains(event.target as Node)) {
-        setIsOpen(false);
-      }
-    }
-    if (isOpen) {
-      document.addEventListener("mousedown", handleClickOutside);
-    }
-    return () => document.removeEventListener("mousedown", handleClickOutside);
-  }, [isOpen]);
-
-  return (
-    <div ref={wrapperRef} className="relative mt-1.5">
-      <button
-        id={id}
-        type="button"
-        disabled={disabled}
-        onClick={() => setIsOpen((prev) => !prev)}
-        className={clsx(
-          CONTACT_FIELD_CONTROL_CLASS,
-          "flex cursor-pointer items-center justify-between text-left disabled:cursor-not-allowed disabled:bg-slate-100",
-        )}
-        aria-haspopup="dialog"
-        aria-expanded={isOpen}
-      >
-        <span className={clsx("text-base", !value && "text-slate-500")}>
-          {value || "Uhrzeit wählen"}
-        </span>
-        <span aria-hidden>🕒</span>
-      </button>
-
-      {isOpen && (
-        <div
-          role="dialog"
-          aria-label="Uhrzeit wählen"
-          className="absolute bottom-full left-0 z-30 mb-2 w-[320px] max-w-[calc(100vw-3rem)] rounded-xl border border-slate-200 bg-white p-3 text-slate-900 shadow-xl"
-        >
-          <p className="mb-2 text-sm font-semibold text-[#2A4961]">Bevorzugte Uhrzeit</p>
-          <div className="grid max-h-56 grid-cols-4 gap-1.5 overflow-y-auto pr-1">
-            {TIME_SLOTS.map((slot) => (
-              <button
-                key={slot}
-                type="button"
-                onClick={() => {
-                  onChange(slot);
-                  setIsOpen(false);
-                }}
-                className={clsx(
-                  "rounded-md px-2 py-1.5 text-sm font-medium transition",
-                  value === slot
-                    ? "bg-[#7596AE] text-white"
-                    : "bg-slate-100 text-slate-700 hover:bg-slate-200",
-                )}
-              >
-                {slot}
-              </button>
-            ))}
-          </div>
-        </div>
-      )}
-    </div>
-  );
-}
-
-function buildCallbackWindow(days: string[], from: string, to: string): string {
-  if (days.length === 0 || !from || !to) return "";
-  return `${days.join(", ")} ${from}–${to}`;
-}
-
 export default function ContactFormSection() {
-  const [step, setStep] = useState<Step>(1);
   const [data, setData] = useState<FormDataState>(DEFAULT_FORM_DATA);
   const [errors, setErrors] = useState<ErrorMap>({});
-  const [showSummary, setShowSummary] = useState(false);
-  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [actionState, runAction, isPending] = useActionState(sendContact, INITIAL_ACTION_STATE);
   const [isSuccess, setIsSuccess] = useState(false);
-  const [submitError, setSubmitError] = useState("");
   const [ticketId, setTicketId] = useState("");
   const [started, setStarted] = useState(false);
-  const [announceMessage, setAnnounceMessage] = useState("");
+  const lastHandledActionRef = useRef<ContactState | null>(null);
   const [isPostalLookupLoading, setIsPostalLookupLoading] = useState(false);
   const [postalLookupError, setPostalLookupError] = useState("");
   const [cityFieldMode, setCityFieldMode] = useState<"text" | "readonly" | "select">("text");
   const [cityOptions, setCityOptions] = useState<OpenPlzLocality[]>([]);
   const [citySearchOptions, setCitySearchOptions] = useState<OpenPlzLocality[]>([]);
   const [isCitySearchLoading, setIsCitySearchLoading] = useState(false);
-  const summaryRef = useRef<HTMLDivElement | null>(null);
+  const showToast = useToastStore((state) => state.show);
+  const clearToasts = useToastStore((state) => state.clear);
   const successHeadingRef = useRef<HTMLHeadingElement | null>(null);
-  const stepHeadingRef = useRef<HTMLHeadingElement | null>(null);
   const citySearchDebounceRef = useRef<number | null>(null);
-  const didMountRef = useRef(false);
+
+  const showErrorToast = (message: string) => {
+    showToast(message, { variant: "error" });
+  };
 
   useEffect(() => {
-    pushAnalyticsEvent("form_view", { form_type: "multi" });
+    pushAnalyticsEvent("form_view", { form_type: "single_step" });
   }, []);
-
-  useEffect(() => {
-    pushAnalyticsEvent("step_view", { step });
-    setAnnounceMessage(`Schritt ${step} von 3.`);
-
-    // Beim initialen Seitenladen keinen Fokus erzwingen, damit die Seite nicht
-    // automatisch zum Formular springt. Fokus nur bei echten Schrittwechseln.
-    if (!didMountRef.current) {
-      didMountRef.current = true;
-      return;
-    }
-
-    stepHeadingRef.current?.focus({ preventScroll: true });
-  }, [step]);
-
-  useEffect(() => {
-    if (showSummary && summaryRef.current) {
-      summaryRef.current.focus();
-    }
-  }, [showSummary]);
 
   useEffect(() => {
     if (isSuccess) {
       successHeadingRef.current?.focus();
-      setAnnounceMessage("Ihre Anfrage wurde erfolgreich gesendet.");
     }
   }, [isSuccess]);
 
   useEffect(() => {
-    if (!data.wantsCallback) {
-      if (data.callbackWindow || data.callbackDays.length > 0 || data.callbackFrom || data.callbackTo) {
-        setData((prev) => ({
-          ...prev,
-          callbackWindow: "",
-          callbackDays: [],
-          callbackFrom: "",
-          callbackTo: "",
-        }));
-      }
+    if (actionState === INITIAL_ACTION_STATE) return;
+    if (lastHandledActionRef.current === actionState) return;
+    lastHandledActionRef.current = actionState;
+
+    if (actionState.ok) {
+      setErrors({});
+      clearToasts();
+      setTicketId(actionState.ticketId ?? `ES-${Date.now().toString().slice(-7)}`);
+      setIsSuccess(true);
+      pushAnalyticsEvent("form_submit_success", {
+        form_type: "single_step",
+        services_count: data.services.length,
+      });
       return;
     }
 
-    const nextWindow = buildCallbackWindow(data.callbackDays, data.callbackFrom, data.callbackTo);
-    if (nextWindow !== data.callbackWindow) {
-      setData((prev) => ({ ...prev, callbackWindow: nextWindow }));
+    let serverErrorCount = 0;
+    if (actionState.errors) {
+      const serverErrors: ErrorMap = {};
+      const e = actionState.errors;
+      if (e.firstName?.[0]) serverErrors.firstName = e.firstName[0];
+      if (e.lastName?.[0]) serverErrors.lastName = e.lastName[0];
+      if (e.email?.[0]) serverErrors.email = e.email[0];
+      if (e.phone?.[0]) serverErrors.phone = e.phone[0];
+      if (e.postalCode?.[0] || e.city?.[0]) {
+        serverErrors.postalCode = e.postalCode?.[0] ?? e.city?.[0] ?? "Bitte PLZ und Ort pruefen.";
+      }
+      if (e.services?.[0]) serverErrors.services = e.services[0];
+      if (e.description?.[0]) serverErrors.description = e.description[0];
+      if (e.privacyConsent?.[0]) serverErrors.privacyConsent = e.privacyConsent[0];
+      setErrors(serverErrors);
+      serverErrorCount = Object.keys(serverErrors).length;
     }
-  }, [data.wantsCallback, data.callbackDays, data.callbackFrom, data.callbackTo, data.callbackWindow]);
+
+    if (actionState.message && !actionState.ok) {
+      showErrorToast(actionState.message);
+    } else if (serverErrorCount > 0) {
+      showErrorToast(
+        `Bitte prüfen Sie die markierten Felder (${serverErrorCount}).`,
+      );
+    }
+    pushAnalyticsEvent("form_submit_fail", { form_type: "single_step" });
+  }, [actionState, data.services.length]);
 
   useEffect(() => {
     const postalCodeDigits = data.postalCode.replace(/\D/g, "");
@@ -680,7 +571,6 @@ export default function ContactFormSection() {
           federalState: "",
         }));
       } catch {
-        // Progressive enhancement: bei API-Fehler normales manuelles Textfeld erlauben.
         setCityFieldMode("text");
         setCityOptions([]);
       } finally {
@@ -745,20 +635,17 @@ export default function ContactFormSection() {
 
   const emailTypoHint = useMemo(() => getEmailTypoHint(data.email), [data.email]);
   const remainingChars = MAX_DESCRIPTION_LENGTH - data.description.length;
-  const isScopeStep2Visible = step === 2;
 
   function updateField<K extends keyof FormDataState>(field: K, value: FormDataState[K]) {
     if (!started) {
       setStarted(true);
-      pushAnalyticsEvent("form_start", { form_type: "multi" });
+      pushAnalyticsEvent("form_start", { form_type: "single_step" });
     }
     setData((prev) => {
       const next = { ...prev, [field]: value };
 
-      // Live-Fehlerzustand: vorhandene Fehlermeldungen sofort entfernen, sobald Feld wieder gültig ist.
       setErrors((currentErrors) => {
         const updatedErrors = { ...currentErrors };
-
         const revalidate = (name: FieldName) => {
           if (!updatedErrors[name]) return;
           const message = validateField(next, name);
@@ -769,28 +656,20 @@ export default function ContactFormSection() {
 
         if (field === "postalCode" || field === "city") {
           revalidate("postalCode");
-        } else if (field === "company") {
-          revalidate("company");
-        } else if (field === "contactName") {
-          revalidate("contactName");
+        } else if (field === "firstName") {
+          revalidate("firstName");
+        } else if (field === "lastName") {
+          revalidate("lastName");
         } else if (field === "email") {
           revalidate("email");
         } else if (field === "phone") {
           revalidate("phone");
         } else if (field === "description") {
           revalidate("description");
-        } else if (
-          field === "wantsCallback" ||
-          field === "callbackWindow" ||
-          field === "callbackDays" ||
-          field === "callbackFrom" ||
-          field === "callbackTo"
-        ) {
-          revalidate("callbackWindow");
         } else if (field === "privacyConsent") {
           revalidate("privacyConsent");
-        } else if (field === "service") {
-          revalidate("service");
+        } else if (field === "services") {
+          revalidate("services");
         }
 
         return updatedErrors;
@@ -798,9 +677,6 @@ export default function ContactFormSection() {
 
       return next;
     });
-    if (field === "wantsCallback" && value === true) {
-      pushAnalyticsEvent("callback_toggle", {});
-    }
   }
 
   function validateAndStore(field: FieldName): string {
@@ -812,128 +688,92 @@ export default function ContactFormSection() {
     return message;
   }
 
-  function validateVisibleFields(): ErrorMap {
-    const visible = getVisibleFields(step, data);
+  function toggleService(value: string) {
+    const next = data.services.includes(value)
+      ? data.services.filter((item) => item !== value)
+      : [...data.services, value];
+    updateField("services", next);
+  }
+
+  function validateAllFields(): ErrorMap {
     const nextErrors: ErrorMap = {};
-    for (const field of visible) {
+    for (const field of FIELD_ORDER) {
       const message = validateField(data, field);
       if (message) nextErrors[field] = message;
     }
     return nextErrors;
   }
 
-  function handleStepNext() {
-    if (step === 1) {
-      const stepErrors: ErrorMap = {};
-      for (const field of ["service", "postalCode"] as FieldName[]) {
-        const msg = validateField(data, field);
-        if (msg) stepErrors[field] = msg;
-      }
-      setErrors((prev) => ({ ...prev, ...stepErrors }));
-      if (Object.keys(stepErrors).length > 0) {
-        setShowSummary(true);
-        return;
-      }
-    }
-    if (step === 2) {
-      pushAnalyticsEvent("step_complete", { step: 2 });
-    }
-    if (step < 3) {
-      if (step === 1) pushAnalyticsEvent("step_complete", { step: 1 });
-      setStep((prev) => (prev + 1) as Step);
-      setShowSummary(false);
-    }
+  function buildFormData(): FormData {
+    const fd = new FormData();
+    fd.set("firstName", data.firstName.trim());
+    fd.set("lastName", data.lastName.trim());
+    if (data.company.trim()) fd.set("company", data.company.trim());
+    fd.set("email", data.email.trim());
+    if (data.phone.trim()) fd.set("phone", data.phone.trim());
+    fd.set("postalCode", data.postalCode.trim());
+    fd.set("city", data.city.trim());
+    if (data.federalState.trim()) fd.set("federalState", data.federalState.trim());
+    for (const service of data.services) fd.append("services", service);
+    fd.set("description", data.description.trim());
+    fd.set("privacyConsent", data.privacyConsent ? "on" : "");
+    fd.set("website", data.hpWebsite);
+    return fd;
   }
 
   function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
-    pushAnalyticsEvent("form_submit_attempt", { form_type: "multi" });
+    pushAnalyticsEvent("form_submit_attempt", { form_type: "single_step" });
 
-    const nextErrors = validateVisibleFields();
-    setErrors((prev) => ({ ...prev, ...nextErrors }));
-    if (Object.keys(nextErrors).length > 0) {
-      setShowSummary(true);
-      return;
-    }
-
-    setShowSummary(false);
-    setSubmitError("");
-    setIsSubmitting(true);
-
-    if (data.hpWebsite.trim()) {
-      setTimeout(() => {
-        setIsSubmitting(false);
-        pushAnalyticsEvent("form_submit_success", {
-          form_type: "multi",
-          service_type: data.service || "unknown",
-        });
-        setTicketId(`ES-${Date.now().toString().slice(-7)}`);
-        setIsSuccess(true);
-      }, 400);
-      return;
-    }
-
-    setTimeout(() => {
-      const success = true;
-      if (success) {
-        setIsSubmitting(false);
-        setTicketId(`ES-${Date.now().toString().slice(-7)}`);
-        setIsSuccess(true);
-        pushAnalyticsEvent("form_submit_success", {
-          form_type: "multi",
-          service_type: data.service || "unknown",
-        });
-      } else {
-        setIsSubmitting(false);
-        setSubmitError("Beim Senden ist ein Fehler aufgetreten. Bitte versuchen Sie es erneut.");
-        pushAnalyticsEvent("form_submit_fail", { error_class: "submit_error" });
+    const nextErrors = validateAllFields();
+    setErrors(nextErrors);
+    const errorCount = Object.keys(nextErrors).length;
+    if (errorCount > 0) {
+      showErrorToast(`Bitte prüfen Sie die markierten Felder (${errorCount}).`);
+      const firstField = FIELD_ORDER.find((field) => nextErrors[field]);
+      if (firstField) {
+        const target = document.getElementById(`contact-${firstField}`);
+        target?.scrollIntoView({ behavior: "smooth", block: "center" });
       }
-    }, 900);
+      return;
+    }
+
+    const formData = buildFormData();
+    startTransition(() => {
+      runAction(formData);
+    });
   }
 
-  function errorSummaryItems() {
-    const currentFields = getVisibleFields(step, data);
-    return currentFields
-      .map((field) => ({ field, message: errors[field] }))
-      .filter((item): item is { field: FieldName; message: string } => Boolean(item.message));
-  }
-
-  const summaryItems = errorSummaryItems();
-  const submitLabel =
-    data.service === "Winterdienst" ? "Winterdienst anfragen" : "Angebot anfordern";
+  const submitLabel = "Angebot anfordern";
 
   return (
     <section
       id="kontaktformular"
-      className="contact-form-section relative px-6 py-12 md:px-10 lg:px-16 max-lg:sticky max-lg:top-0 max-lg:z-10 max-lg:py-6"
+      className="contact-form-section relative flex h-svh flex-col overflow-hidden px-4 py-3 md:px-10 md:py-6 lg:px-14 lg:py-7"
       aria-labelledby="contact-heading"
     >
-      <div className="mx-auto w-full max-w-7xl">
-        <h2 id="contact-heading" className="text-2xl font-bold text-white md:text-3xl max-lg:text-xl">
-          Angebot anfordern
-        </h2>
-        <p className="mt-2 text-base text-white/90 md:mt-3 md:text-lg max-lg:mt-1.5 max-lg:text-sm">
-          Dieses Formular ist ausschließlich für Gewerbekunden. Für Privatanfragen wenden Sie sich bitte an den{" "}
-          <Link href="/kontakt" className="underline decoration-white/60 underline-offset-2">
-            Kontakt
-          </Link>
-          .
-        </p>
+      <div className="mx-auto flex min-h-0 w-full max-w-7xl flex-1 flex-col">
+        <div className="flex shrink-0 flex-col gap-0.5 md:flex-row md:items-end md:justify-between md:gap-6">
+          <div>
+            <h2
+              id="contact-heading"
+              className="text-base font-bold leading-tight text-white md:text-xl lg:text-2xl"
+            >
+              Angebot anfordern
+            </h2>
+          </div>
+          <p className="hidden text-xs text-white/75 md:block">* Pflichtfeld</p>
+        </div>
 
-        <div className="mt-6 grid gap-6 lg:mt-8 lg:grid-cols-[minmax(0,2fr)_minmax(0,1fr)]">
-          <div
-            className={clsx(
-              "flex flex-col overflow-hidden rounded-2xl bg-white/15 p-4 backdrop-blur-xl md:p-8",
-              !isSuccess && "lg:h-[min(42rem,calc(100vh-14rem))] lg:shrink-0",
-            )}
-          >
+        <div className="mt-2 grid min-h-0 flex-1 gap-3 md:mt-4 md:gap-4 lg:grid-cols-[minmax(0,1.25fr)_minmax(0,1fr)] lg:gap-5">
+          <div className="flex min-h-0 min-w-0 flex-col overflow-hidden rounded-2xl bg-white/15 p-3 backdrop-blur-xl md:p-4 lg:p-5">
             {isSuccess ? (
               <div className="rounded-xl border border-emerald-200 bg-emerald-50 p-5 text-emerald-900">
                 <h3 ref={successHeadingRef} tabIndex={-1} className="text-xl font-bold">
                   Danke – Ihre Anfrage ist eingegangen.
                 </h3>
                 <p className="mt-2 text-sm">
-                  Wir melden uns in der Regel innerhalb von 1 Werktag bei Ihnen. Ihre Referenznummer: {ticketId}
+                  Wir melden uns schnellstmöglich bei Ihnen. Ihre Referenznummer: {ticketId}
                 </p>
                 <p className="mt-2 text-sm">
                   Für dringende Fälle:{" "}
@@ -949,687 +789,386 @@ export default function ContactFormSection() {
             ) : (
               <form
                 method="post"
-                action="/kontakt-anfrage"
                 noValidate
                 onSubmit={handleSubmit}
-                className="flex min-h-0 flex-1 flex-col space-y-5 max-lg:min-h-0 max-lg:space-y-0 [&_button]:cursor-pointer [&_input]:cursor-pointer [&_select]:cursor-pointer [&_textarea]:cursor-pointer [&_button:disabled]:cursor-not-allowed [&_input:disabled]:cursor-not-allowed [&_select:disabled]:cursor-not-allowed [&_textarea:disabled]:cursor-not-allowed"
+                className="flex min-h-0 flex-1 flex-col [&_button]:cursor-pointer [&_input]:cursor-pointer [&_select]:cursor-pointer [&_textarea]:cursor-pointer [&_button:disabled]:cursor-not-allowed [&_input:disabled]:cursor-not-allowed [&_select:disabled]:cursor-not-allowed [&_textarea:disabled]:cursor-not-allowed"
               >
-                <div className="sr-only" aria-live="polite">{announceMessage}</div>
-
-                <div className="flex min-h-0 flex-1 flex-col max-lg:gap-3">
-                  <div className="shrink-0 space-y-2 max-lg:space-y-1.5">
-                    <p className="text-base text-white/85">* Pflichtfeld</p>
-                    <h3 ref={stepHeadingRef} tabIndex={-1} className="text-xl font-semibold text-white">
-                      Schritt {step} von 3
-                    </h3>
-                    <div className="h-2 overflow-hidden rounded-full bg-white/25 max-lg:h-1.5">
-                      <div
-                        className="h-full rounded-full bg-white transition-all"
-                        style={{ width: `${(step / 3) * 100}%` }}
-                        aria-hidden
-                      />
-                    </div>
-                  </div>
-
-                  <div className="min-h-0 flex-1 space-y-4 overflow-visible pr-0.5 max-lg:space-y-3 lg:pr-0">
-                {showSummary && summaryItems.length > 0 && (
-                  <div
-                    ref={summaryRef}
-                    tabIndex={-1}
-                    role="alert"
-                    aria-live="assertive"
-                    className="rounded-lg border border-red-200 bg-red-50 p-4 text-red-900"
-                  >
-                    <p className="font-semibold">
-                      Bitte prüfen Sie die markierten Felder. Es gibt noch {summaryItems.length} Eingabefehler.
-                    </p>
-                    <ul className="mt-2 list-disc pl-5">
-                      {summaryItems.map((item) => (
-                        <li key={item.field}>
-                          <button
-                            type="button"
-                            className="underline"
-                            onClick={() => {
-                              document.getElementById(`contact-${item.field}`)?.focus();
-                            }}
-                          >
-                            {item.message}
-                          </button>
-                        </li>
-                      ))}
-                    </ul>
-                  </div>
-                )}
-
-                <div className={clsx(step !== 1 && "hidden")}>
-                  <p id="contact-service" className="mb-2 block text-base font-semibold text-white">
-                    Welche Leistung benötigen Sie? <span aria-hidden>*</span>
-                  </p>
-                  <div className="grid grid-cols-3 gap-1.5 sm:gap-2">
-                    {SERVICE_OPTIONS.map((option) => (
-                      <label
-                        key={option.value}
-                        className="w-full cursor-pointer"
-                      >
-                        <input
-                          id={`contact-service-${option.value}`}
-                          className="sr-only"
-                          type="radio"
-                          name="service"
-                          value={option.value}
-                          checked={data.service === option.value}
-                          onChange={(e) => updateField("service", e.target.value as ServiceType)}
-                          onBlur={() => validateAndStore("service")}
-                        />
-                        <div
-                          className={clsx(
-                            "h-17 w-full overflow-hidden rounded-lg border transition sm:h-28 md:h-32 sm:rounded-xl",
-                            data.service === option.value
-                              ? "border-2 border-white"
-                              : "border-white/40",
-                          )}
-                        >
-                          <img
-                            src={option.image}
-                            alt={option.value}
-                            className="h-full w-full object-cover"
-                          />
-                        </div>
-                        <div className="px-0.5 pt-1 text-center text-white sm:px-1 sm:pt-0.5">
-                          <span className="text-xs font-normal leading-tight sm:text-lg">{option.value}</span>
-                        </div>
-                      </label>
-                    ))}
-                  </div>
-                  {errors.service && <p className="mt-1 text-sm text-red-100">{errors.service}</p>}
-                </div>
-
-                <div className={clsx(step !== 1 && "hidden")}>
-                  <Label htmlFor="contact-postalCode" text="Objektstandort" required />
-                  <div className="mt-1.5 grid min-w-0 grid-cols-[minmax(0,7.25rem)_minmax(0,1fr)] gap-2 sm:gap-3">
-                    <div className="relative min-w-0 max-w-full">
+                {/*
+                  Content-Area:
+                  - KEIN vertikaler Scroll – das Formular soll niemals 100svh
+                    uebersteigen. Erreicht durch reservierte Fehlerslots
+                    (FieldMessage) + kompakte Paddings → kein Layout-Shift,
+                    wenn Errors erscheinen, und nichts wird abgeschnitten.
+                  - `overflow-x-hidden` blockt nur die ungewollte x-Scrollbar
+                    durch das `-mx-4`-Bleed der Service-Carousel.
+                */}
+                <div className="flex min-h-0 min-w-0 flex-1 flex-col space-y-1.5 overflow-x-hidden md:space-y-3">
+                  <div className="grid shrink-0 grid-cols-2 gap-x-2.5 gap-y-1 md:gap-x-3 md:gap-y-2">
+                    <div>
+                      <Label htmlFor="contact-firstName" text="Vorname" required />
                       <input
-                        id="contact-postalCode"
-                        name="postalCode"
-                        autoComplete="postal-code"
-                        inputMode="numeric"
-                        maxLength={5}
-                        placeholder="PLZ"
-                        value={data.postalCode}
-                        onChange={(e) => updateField("postalCode", e.target.value)}
-                        onFocus={() => {
-                          setCityFieldMode((prev) => (prev === "readonly" ? "text" : prev));
-                        }}
-                        onBlur={() => validateAndStore("postalCode")}
-                        className={clsx(CONTACT_FIELD_CONTROL_CLASS, "pr-10")}
+                        id="contact-firstName"
+                        name="firstName"
+                        autoComplete="given-name"
+                        value={data.firstName}
+                        onChange={(e) => updateField("firstName", e.target.value)}
+                        onBlur={() => validateAndStore("firstName")}
+                        aria-invalid={Boolean(errors.firstName)}
+                        className={fieldClass(Boolean(errors.firstName))}
                       />
-                      {isPostalLookupLoading && (
-                        <span
-                          className="absolute right-3 top-1/2 h-4 w-4 -translate-y-1/2 animate-spin rounded-full border-2 border-slate-400 border-t-transparent"
-                          aria-hidden
-                        />
-                      )}
+                      <FieldMessage message={errors.firstName} />
                     </div>
-                    <div className="relative min-w-0 w-full max-w-[min(100%,18rem)]">
-                      {cityFieldMode === "select" ? (
-                        <select
-                          id="contact-city"
-                          name="city"
-                          autoComplete="address-level2"
-                          value={data.city}
-                          onChange={(e) => {
-                            const selected = cityOptions.find((option) => option.name === e.target.value);
-                            updateField("city", e.target.value);
-                            updateField("federalState", selected?.federalState?.name || "");
+
+                    <div>
+                      <Label htmlFor="contact-lastName" text="Nachname" required />
+                      <input
+                        id="contact-lastName"
+                        name="lastName"
+                        autoComplete="family-name"
+                        value={data.lastName}
+                        onChange={(e) => updateField("lastName", e.target.value)}
+                        onBlur={() => validateAndStore("lastName")}
+                        aria-invalid={Boolean(errors.lastName)}
+                        className={fieldClass(Boolean(errors.lastName))}
+                      />
+                      <FieldMessage message={errors.lastName} />
+                    </div>
+
+                    <div>
+                      <Label htmlFor="contact-email" text="E-Mail" required />
+                      <input
+                        id="contact-email"
+                        name="email"
+                        type="email"
+                        autoComplete="email"
+                        value={data.email}
+                        onChange={(e) => updateField("email", e.target.value)}
+                        onBlur={() => validateAndStore("email")}
+                        aria-invalid={Boolean(errors.email)}
+                        className={fieldClass(Boolean(errors.email))}
+                      />
+                      <FieldMessage hint={emailTypoHint} message={errors.email} />
+                    </div>
+
+                    <div>
+                      <Label htmlFor="contact-phone" text="Telefon" optional />
+                      <input
+                        id="contact-phone"
+                        type="tel"
+                        name="phone"
+                        autoComplete="tel"
+                        inputMode="tel"
+                        value={data.phone}
+                        onChange={(e) => updateField("phone", e.target.value)}
+                        onBlur={() => validateAndStore("phone")}
+                        aria-invalid={Boolean(errors.phone)}
+                        className={fieldClass(Boolean(errors.phone))}
+                      />
+                      <FieldMessage message={errors.phone} />
+                    </div>
+
+                    <div className="col-span-2">
+                      <Label htmlFor="contact-company" text="Unternehmen" optional />
+                      <input
+                        id="contact-company"
+                        name="company"
+                        autoComplete="organization"
+                        value={data.company}
+                        onChange={(e) => updateField("company", e.target.value)}
+                        className={clsx("mt-1", CONTACT_FIELD_CONTROL_CLASS)}
+                      />
+                    </div>
+                  </div>
+
+                  <div className="shrink-0">
+                    <Label htmlFor="contact-postalCode" text="Objektstandort" required />
+                    <div className="mt-1 grid min-w-0 grid-cols-[minmax(0,6.5rem)_minmax(0,1fr)] gap-2.5">
+                      <div className="relative min-w-0 max-w-full">
+                        <input
+                          id="contact-postalCode"
+                          name="postalCode"
+                          autoComplete="postal-code"
+                          inputMode="numeric"
+                          maxLength={5}
+                          placeholder="PLZ"
+                          value={data.postalCode}
+                          onChange={(e) => updateField("postalCode", e.target.value)}
+                          onFocus={() => {
+                            setCityFieldMode((prev) => (prev === "readonly" ? "text" : prev));
                           }}
                           onBlur={() => validateAndStore("postalCode")}
-                          disabled={isPostalLookupLoading}
-                          className={CONTACT_SELECT_BASE_CLASS}
-                        >
-                          <option value="">Ort wählen</option>
-                          {cityOptions.map((option) => (
-                            <option key={`${option.postalCode}-${option.name}`} value={option.name}>
-                              {option.name}
-                            </option>
-                          ))}
-                        </select>
-                      ) : (
-                    <input
-                          id="contact-city"
-                          name="city"
-                          autoComplete="address-level2"
-                          placeholder="Ort"
-                          value={data.city}
-                          onChange={(e) => updateField("city", e.target.value)}
-                      onBlur={() => validateAndStore("postalCode")}
-                          readOnly={cityFieldMode === "readonly"}
-                          disabled={isPostalLookupLoading}
+                          aria-invalid={Boolean(errors.postalCode)}
                           className={clsx(
                             CONTACT_FIELD_CONTROL_CLASS,
-                            cityFieldMode === "readonly" && "bg-slate-100 text-slate-600",
+                            "pr-9",
+                            errors.postalCode &&
+                              "border-red-500 ring-1 ring-red-500/40 focus:border-red-500",
                           )}
                         />
-                      )}
-
-                      {cityFieldMode === "text" && data.city.trim().length >= 2 && citySearchOptions.length > 0 && (
-                        <div className="absolute top-full z-20 mt-1 w-full rounded-lg border border-slate-200 bg-white p-1 shadow-lg">
-                          {citySearchOptions.map((option) => (
-                            <button
-                              key={`${option.postalCode}-${option.name}-search`}
-                              type="button"
-                              onClick={() => {
-                                updateField("postalCode", option.postalCode);
-                                updateField("city", option.name);
-                                updateField("federalState", option.federalState?.name || "");
-                                setCitySearchOptions([]);
-                              }}
-                              className="block w-full rounded-md px-2 py-2 text-left text-sm text-slate-700 hover:bg-slate-100"
-                            >
-                              {option.name}
-                            </button>
-                          ))}
-                        </div>
-                      )}
-                    </div>
-                  </div>
-                  <p className="mt-1 text-sm text-white/85">Bitte PLZ und Ort des zu betreuenden Objekts angeben.</p>
-                  {postalLookupError && <p className="mt-1 text-sm text-amber-100">{postalLookupError}</p>}
-                  {isCitySearchLoading && cityFieldMode === "text" && (
-                    <p className="mt-1 text-xs text-white/75">Ort wird gesucht...</p>
-                  )}
-                  {errors.postalCode && (
-                    <p className="mt-1 text-sm text-red-100">{errors.postalCode}</p>
-                  )}
-                </div>
-
-                {step === 1 && (
-                  <>
-                    <div>
-                      <Label htmlFor="contact-desiredStartDate" text="Gewünschter Leistungsbeginn" optional />
-                      <div className="mt-1.5 grid min-w-0 gap-3 sm:grid-cols-2">
-                        <div className="min-w-0 justify-self-start">
-                          <ModernDatePicker
-                            id="contact-desiredStartDate"
-                            value={data.desiredStartDate}
-                            onChange={(nextDate) => updateField("desiredStartDate", nextDate)}
+                        {isPostalLookupLoading && (
+                          <span
+                            className="absolute right-3 top-1/2 h-4 w-4 -translate-y-1/2 animate-spin rounded-full border-2 border-slate-400 border-t-transparent"
+                            aria-hidden
                           />
-                        </div>
-                        <div className="hidden min-w-0 sm:block" aria-hidden="true" />
+                        )}
                       </div>
-                    </div>
-                  </>
-                )}
-
-                <div className={clsx(!isScopeStep2Visible && "hidden")} aria-hidden={!isScopeStep2Visible}>
-                  {data.service === "Reinigungsservice" && (
-                    <div className="grid gap-4 sm:grid-cols-2">
-                      <div>
-                        <Label htmlFor="contact-cleaningObjectType" text="Objektart" optional />
-                        <select
-                          id="contact-cleaningObjectType"
-                          disabled={!isScopeStep2Visible || data.service !== "Reinigungsservice"}
-                          value={data.cleaningObjectType}
-                          onChange={(e) => updateField("cleaningObjectType", e.target.value)}
-                          className={CONTACT_STEP2_SELECT_FIELD_CLASS}
-                        >
-                          <option value="">Bitte wählen</option>
-                          <option>Büro</option>
-                          <option>Produktion</option>
-                          <option>Healthcare</option>
-                          <option>Sonstiges</option>
-                        </select>
-                      </div>
-                      <div>
-                        <Label htmlFor="contact-cleaningArea" text="Grobe Fläche (m²)" optional />
-                        <select
-                          id="contact-cleaningArea"
-                          disabled={!isScopeStep2Visible || data.service !== "Reinigungsservice"}
-                          value={data.cleaningArea}
-                          onChange={(e) => updateField("cleaningArea", e.target.value)}
-                          className={CONTACT_STEP2_SELECT_FIELD_CLASS}
-                        >
-                          <option value="">Bitte wählen</option>
-                          <option>&lt; 500 m²</option>
-                          <option>500–2.000 m²</option>
-                          <option>2.000–5.000 m²</option>
-                          <option>&gt; 5.000 m²</option>
-                        </select>
-                      </div>
-                      <div>
-                        <Label htmlFor="contact-cleaningFrequency" text="Reinigungsfrequenz" optional />
-                        <select
-                          id="contact-cleaningFrequency"
-                          disabled={!isScopeStep2Visible || data.service !== "Reinigungsservice"}
-                          value={data.cleaningFrequency}
-                          onChange={(e) => updateField("cleaningFrequency", e.target.value)}
-                          className={CONTACT_STEP2_SELECT_FIELD_CLASS}
-                        >
-                          <option value="">Bitte wählen</option>
-                          <option>Täglich</option>
-                          <option>3×/Woche</option>
-                          <option>1×/Woche</option>
-                          <option>Nach Bedarf</option>
-                        </select>
-                      </div>
-                      <fieldset>
-                        <legend className="text-base font-semibold text-white">Hygieneanforderungen (optional)</legend>
-                        <div className="mt-2 grid grid-cols-2 gap-1.5 sm:gap-2 sm:grid-cols-4">
-                          {CLEANING_HYGIENE_OPTIONS.map((item) => (
-                            <label
-                              key={item.value}
-                              className="w-full cursor-pointer"
-                            >
-                              <input
-                                type="checkbox"
-                                disabled={!isScopeStep2Visible || data.service !== "Reinigungsservice"}
-                                checked={data.cleaningHygiene.includes(item.value)}
-                                onChange={(e) => {
-                                  const next = e.target.checked
-                                    ? [...data.cleaningHygiene, item.value]
-                                    : data.cleaningHygiene.filter((value) => value !== item.value);
-                                  updateField("cleaningHygiene", next);
-                                }}
-                                className="sr-only"
-                              />
-                              <div
-                                className={clsx(
-                                  "h-17 w-full overflow-hidden rounded-lg border transition sm:h-28 md:h-32 sm:rounded-xl",
-                                  data.cleaningHygiene.includes(item.value)
-                                    ? "border-2 border-white"
-                                    : "border-white/40",
-                                )}
+                      <div className="relative min-w-0 w-full max-w-[min(100%,18rem)]">
+                        {cityFieldMode === "select" ? (
+                          <select
+                            id="contact-city"
+                            name="city"
+                            autoComplete="address-level2"
+                            value={data.city}
+                            onChange={(e) => {
+                              const selected = cityOptions.find(
+                                (option) => option.name === e.target.value,
+                              );
+                              updateField("city", e.target.value);
+                              updateField("federalState", selected?.federalState?.name || "");
+                            }}
+                            onBlur={() => validateAndStore("postalCode")}
+                            disabled={isPostalLookupLoading}
+                            className={CONTACT_SELECT_BASE_CLASS}
+                          >
+                            <option value="">Ort wählen</option>
+                            {cityOptions.map((option) => (
+                              <option
+                                key={`${option.postalCode}-${option.name}`}
+                                value={option.name}
                               >
-                                <img src={item.image} alt={item.value} className="h-full w-full object-cover" />
-                              </div>
-                              <div className="px-0.5 pt-1 text-center text-white sm:px-1 sm:pt-0.5">
-                                <span className="text-sm leading-tight sm:text-lg">{item.value}</span>
-                              </div>
-                            </label>
-                          ))}
-                        </div>
-                      </fieldset>
-                    </div>
-                  )}
-                  {data.service === "Winterdienst" && (
-                    <div className="grid gap-4 sm:grid-cols-2">
-                      <fieldset>
-                        <legend className="text-base font-semibold text-white">Flächenarten (optional)</legend>
-                        <div className="mt-2 grid grid-cols-2 gap-1.5 sm:gap-2 sm:grid-cols-4">
-                          {WINTER_AREA_OPTIONS.map((item) => (
-                            <label
-                              key={item.value}
-                              className="w-full cursor-pointer"
-                            >
-                              <input
-                                type="checkbox"
-                                disabled={!isScopeStep2Visible || data.service !== "Winterdienst"}
-                                checked={data.winterAreas.includes(item.value)}
-                                onChange={(e) => {
-                                  const next = e.target.checked
-                                    ? [...data.winterAreas, item.value]
-                                    : data.winterAreas.filter((value) => value !== item.value);
-                                  updateField("winterAreas", next);
-                                }}
-                                className="sr-only"
-                              />
-                              <div
-                                className={clsx(
-                                  "h-17 w-full overflow-hidden rounded-lg border transition sm:h-28 md:h-32 sm:rounded-xl",
-                                  data.winterAreas.includes(item.value)
-                                    ? "border-2 border-white"
-                                    : "border-white/40",
-                                )}
-                              >
-                                <img src={item.image} alt={item.value} className="h-full w-full object-cover" />
-                              </div>
-                              <div className="px-0.5 pt-1 text-center text-white sm:px-1 sm:pt-0.5">
-                                <span className="text-sm font-semibold leading-tight sm:text-lg">{item.value}</span>
-                              </div>
-                            </label>
-                          ))}
-                        </div>
-                      </fieldset>
-                      <div>
-                        <Label htmlFor="contact-winterWindow" text="Einsatzfenster" optional />
-                        <select
-                          id="contact-winterWindow"
-                          disabled={!isScopeStep2Visible || data.service !== "Winterdienst"}
-                          value={data.winterWindow}
-                          onChange={(e) => updateField("winterWindow", e.target.value)}
-                          className={CONTACT_STEP2_SELECT_FIELD_CLASS}
-                        >
-                          <option value="">Bitte wählen</option>
-                          <option>vor 6 Uhr</option>
-                          <option>6–8 Uhr</option>
-                          <option>flexibel</option>
-                        </select>
-                      </div>
-                      <div>
-                        <p className="text-base font-semibold text-white">Bereitschaftsdienst (optional)</p>
-                        <label className="mt-1.5 flex items-center gap-2 text-sm text-white">
+                                {option.name}
+                              </option>
+                            ))}
+                          </select>
+                        ) : (
                           <input
-                            type="checkbox"
-                            disabled={!isScopeStep2Visible || data.service !== "Winterdienst"}
-                            checked={data.winterOnCall}
-                            onChange={(e) => updateField("winterOnCall", e.target.checked)}
+                            id="contact-city"
+                            name="city"
+                            autoComplete="address-level2"
+                            placeholder="Ort"
+                            value={data.city}
+                            onChange={(e) => updateField("city", e.target.value)}
+                            onBlur={() => validateAndStore("postalCode")}
+                            readOnly={cityFieldMode === "readonly"}
+                            disabled={isPostalLookupLoading}
+                            className={clsx(
+                              CONTACT_FIELD_CONTROL_CLASS,
+                              cityFieldMode === "readonly" && "bg-slate-100 text-slate-600",
+                            )}
                           />
-                          Ja
-                        </label>
+                        )}
+
+                        {cityFieldMode === "text" &&
+                          data.city.trim().length >= 2 &&
+                          citySearchOptions.length > 0 && (
+                            <div className="absolute top-full z-20 mt-1 w-full rounded-lg border border-slate-200 bg-white p-1 shadow-lg">
+                              {citySearchOptions.map((option) => (
+                                <button
+                                  key={`${option.postalCode}-${option.name}-search`}
+                                  type="button"
+                                  onClick={() => {
+                                    updateField("postalCode", option.postalCode);
+                                    updateField("city", option.name);
+                                    updateField(
+                                      "federalState",
+                                      option.federalState?.name || "",
+                                    );
+                                    setCitySearchOptions([]);
+                                  }}
+                                  className="block w-full rounded-md px-2 py-1.5 text-left text-xs text-slate-700 hover:bg-slate-100"
+                                >
+                                  {option.name}
+                                </button>
+                              ))}
+                            </div>
+                          )}
                       </div>
                     </div>
-                  )}
-                  {data.service === "Gebäudeservice" && (
-                    <div className="grid gap-4 sm:grid-cols-2">
-                      <fieldset>
-                        <legend className="text-base font-semibold text-white">Leistungsbausteine (optional)</legend>
-                        <div className="mt-2 grid grid-cols-2 gap-1.5 sm:gap-2 sm:grid-cols-4">
-                          {BUILDING_MODULE_OPTIONS.map((item) => (
-                            <label
-                              key={item.value}
-                              className="w-full cursor-pointer"
+                    <FieldMessage hint={postalLookupError} message={errors.postalCode} />
+                  </div>
+
+                  <fieldset className="flex min-w-0 flex-col md:min-h-0 md:flex-1">
+                    <legend
+                      id="contact-services"
+                      className="mb-1 block shrink-0 text-xs font-semibold text-white md:mb-1.5"
+                    >
+                      <span className="text-sm md:text-base">
+                        Welche Leistungen benötigen Sie?
+                      </span>{" "}
+                      <span aria-hidden>*</span>
+                      <span className="ml-1.5 text-xs font-normal text-white/75">
+                        (Mehrfachauswahl)
+                      </span>
+                    </legend>
+                    {/*
+                      Mobile (< md): horizontaler Snap-Carousel.
+                      - `snap-start` + `scroll-pl-4` snappt jede Card linksbuendig
+                        am Container-Padding → erste Card ist nicht zentriert,
+                        rechts bleibt Platz fuer eine deutlich sichtbare
+                        Vorschau auf die naechste Card.
+                      - Tile-Groesse `w-[40vw] max-w-[140px]` skaliert mit
+                        Viewport: 2 Tiles voll + ~1/3 der dritten als Peek.
+                      - `aspect-square` → Tiles bleiben quadratisch, egal welche
+                        Breite.
+                      md+: weiterhin 5x2 Grid, Tiles fuellen Restplatz fluide.
+                    */}
+                    <div className="snap-carousel -mx-4 flex snap-x snap-mandatory gap-2 overflow-x-auto overscroll-x-contain scroll-pl-4 px-4 pb-1 pt-0.5 transform-gpu will-change-transform backface-hidden [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:h-0 [&::-webkit-scrollbar]:w-0 md:mx-0 md:grid md:min-h-0 md:flex-1 md:auto-rows-fr md:snap-none md:grid-cols-5 md:grid-rows-2 md:gap-2 md:overflow-visible md:overscroll-auto md:px-0 md:pb-0 md:pt-0 lg:gap-2.5">
+                      {SERVICE_OPTIONS.map((option) => {
+                        const isSelected = data.services.includes(option.value);
+                        return (
+                          <button
+                            key={option.value}
+                            id={`contact-service-${option.value}`}
+                            type="button"
+                            role="checkbox"
+                            aria-checked={isSelected}
+                            onClick={() => toggleService(option.value)}
+                            onBlur={() => validateAndStore("services")}
+                            className="group relative block aspect-square w-[clamp(88px,28vw,112px)] shrink-0 cursor-pointer snap-start rounded-lg outline-none transform-[translateZ(0)] backface-hidden focus-visible:ring-2 focus-visible:ring-white focus-visible:ring-offset-2 focus-visible:ring-offset-[#2A4961] md:aspect-auto md:h-full md:w-auto md:min-h-0 lg:rounded-xl"
+                          >
+                            <span
+                              className={clsx(
+                                "relative block h-full w-full overflow-hidden rounded-lg border-2 transition lg:rounded-xl",
+                                isSelected
+                                  ? "border-white"
+                                  : "border-white/40 group-hover:border-white/80",
+                              )}
                             >
-                              <input
-                                type="checkbox"
-                                disabled={!isScopeStep2Visible || data.service !== "Gebäudeservice"}
-                                checked={data.buildingModules.includes(item.value)}
-                                onChange={(e) => {
-                                  const next = e.target.checked
-                                    ? [...data.buildingModules, item.value]
-                                    : data.buildingModules.filter((value) => value !== item.value);
-                                  updateField("buildingModules", next);
-                                }}
-                                className="sr-only"
-                              />
-                              <div
+                              <Image
+                                src={option.image}
+                                alt=""
+                                fill
+                                placeholder="blur"
+                                sizes="(max-width: 767px) clamp(88px, 28vw, 112px), 140px"
                                 className={clsx(
-                                  "h-17 w-full overflow-hidden rounded-lg border transition sm:h-28 md:h-32 sm:rounded-xl",
-                                  data.buildingModules.includes(item.value)
-                                    ? "border-2 border-white"
-                                    : "border-white/40",
+                                  "object-cover transition duration-200",
+                                  isSelected
+                                    ? "scale-105"
+                                    : "opacity-90 group-hover:scale-105 group-hover:opacity-100",
                                 )}
+                              />
+                              {/* Dunklerer, hoeherer Verlauf – Label wird auch
+                                  ueber hellen Bildbereichen klar lesbar */}
+                              <span
+                                aria-hidden
+                                className="pointer-events-none absolute inset-x-0 bottom-0 h-3/4 bg-linear-to-t from-black/90 via-black/55 to-transparent"
+                              />
+                              <span
+                                className="pointer-events-none absolute inset-x-1.5 bottom-1.5 text-center text-[11px] font-semibold leading-tight text-white md:inset-x-1.5 md:bottom-1.5 md:text-[11px] lg:text-xs"
+                                style={{ textShadow: "0 1px 2px rgba(0,0,0,0.55)" }}
                               >
-                                <img src={item.image} alt={item.value} className="h-full w-full object-cover" />
-                              </div>
-                              <div className="px-0.5 pt-1 text-center text-white sm:px-1 sm:pt-0.5">
-                                <span className="text-sm font-semibold leading-tight sm:text-lg">{item.value}</span>
-                              </div>
-                            </label>
-                          ))}
-                        </div>
-                      </fieldset>
+                                {option.value}
+                              </span>
+                              {isSelected && (
+                                <span
+                                  aria-hidden
+                                  className="absolute right-2 top-2 flex h-6 w-6 items-center justify-center rounded-full bg-white text-[#2A4961] ring-1 ring-black/10"
+                                >
+                                  <svg
+                                    className="h-3.5 w-3.5"
+                                    viewBox="0 0 20 20"
+                                    fill="currentColor"
+                                  >
+                                    <path
+                                      fillRule="evenodd"
+                                      d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 111.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z"
+                                      clipRule="evenodd"
+                                    />
+                                  </svg>
+                                </span>
+                              )}
+                            </span>
+                          </button>
+                        );
+                      })}
                     </div>
-                  )}
-                </div>
+                    <FieldMessage message={errors.services} />
+                  </fieldset>
 
-                <div className={clsx(step !== 3 && "hidden")}>
-                  <div>
-                    <Label htmlFor="contact-company" text="Unternehmen" required />
-                    <input
-                      id="contact-company"
-                      name="company"
-                      autoComplete="organization"
-                      value={data.company}
-                      onChange={(e) => updateField("company", e.target.value)}
-                      onBlur={() => validateAndStore("company")}
-                      className={clsx("mt-1.5", CONTACT_FIELD_CONTROL_CLASS)}
+                  <div className="shrink-0">
+                    <Label
+                      htmlFor="contact-description"
+                      text="Kurze Objektbeschreibung"
+                      required
                     />
-                    {errors.company && <p id="contact-company-error" className="mt-1 text-sm text-red-100">Fehler: {errors.company}</p>}
-                  </div>
-
-                  <div>
-                    <Label htmlFor="contact-contactName" text="Ansprechpartner:in" required />
-                    <input
-                      id="contact-contactName"
-                      name="contactName"
-                      autoComplete="name"
-                      value={data.contactName}
-                      onChange={(e) => updateField("contactName", e.target.value)}
-                      onBlur={() => validateAndStore("contactName")}
-                      className={clsx("mt-1.5", CONTACT_FIELD_CONTROL_CLASS)}
-                    />
-                    {errors.contactName && <p id="contact-contactName-error" className="mt-1 text-sm text-red-100">Fehler: {errors.contactName}</p>}
-                  </div>
-
-                  <div>
-                    <Label htmlFor="contact-email" text="E-Mail-Adresse" required />
-                    <input
-                      id="contact-email"
-                      name="email"
-                      type="email"
-                      autoComplete="email"
-                      value={data.email}
-                      onChange={(e) => updateField("email", e.target.value)}
-                      onBlur={() => validateAndStore("email")}
-                      className={clsx("mt-1.5", CONTACT_FIELD_CONTROL_CLASS)}
-                    />
-                    {emailTypoHint && <p id="contact-email-hint" className="mt-1 text-sm text-amber-100">{emailTypoHint}</p>}
-                    {errors.email && <p id="contact-email-error" className="mt-1 text-sm text-red-100">Fehler: {errors.email}</p>}
-                  </div>
-
-                  <div>
-                    <Label htmlFor="contact-phone" text="Telefonnummer" optional />
-                    <input
-                      id="contact-phone"
-                      type="tel"
-                      name="phone"
-                      autoComplete="tel"
-                      inputMode="tel"
-                      value={data.phone}
-                      onChange={(e) => updateField("phone", e.target.value)}
-                      onBlur={() => validateAndStore("phone")}
-                      className={clsx("mt-1.5", CONTACT_FIELD_CONTROL_CLASS)}
-                    />
-                  </div>
-
-                  <div>
-                    <Label htmlFor="contact-description" text="Beschreibung Ihrer Anfrage" optional />
                     <textarea
                       id="contact-description"
                       name="description"
-                      rows={5}
+                      rows={2}
                       maxLength={MAX_DESCRIPTION_LENGTH}
-                      placeholder="Welche Leistungen benötigen Sie? (z. B. Unterhaltsreinigung 3×/Woche, Winterdienst für Parkplatz)"
+                      placeholder="z. B. Treppenhaus 4 Stockwerke, ca. 120 m², 1× pro Woche"
                       value={data.description}
                       onChange={(e) => updateField("description", e.target.value)}
                       onBlur={() => validateAndStore("description")}
-                      className={CONTACT_TEXTAREA_FIELD_CLASS}
-                    />
-                    {remainingChars <= 100 && (
-                      <p className="mt-1 text-sm text-white/85" aria-live="polite">
-                        Verbleibende Zeichen: {remainingChars}
-                      </p>
-                    )}
-                    {errors.description && <p id="contact-description-error" className="mt-1 text-sm text-red-100">Fehler: {errors.description}</p>}
-                  </div>
-
-                  <div className="mt-2">
-                    <label className="flex items-center gap-2 text-base font-semibold text-white">
-                      <input
-                        type="checkbox"
-                        checked={data.wantsCallback}
-                        onChange={(e) => updateField("wantsCallback", e.target.checked)}
-                      />
-                      Ich wünsche einen Rückruf <span className="font-normal text-white/85">(optional)</span>
-                    </label>
-                  </div>
-
-                  <div className={clsx(!data.wantsCallback && "hidden")} aria-hidden={!data.wantsCallback}>
-                    <Label htmlFor="contact-callbackWindow" text="Bevorzugter Zeitraum" />
-                    <div className="mt-1.5 space-y-4">
-                      <div>
-                        <p className="text-sm font-semibold text-white/90">Wochentage</p>
-                        <div className="mt-1.5 flex flex-wrap gap-2">
-                          {CALLBACK_WEEKDAYS.map((day) => {
-                            const isSelected = data.callbackDays.includes(day);
-                            return (
-                              <button
-                                key={day}
-                                type="button"
-                                onClick={() => {
-                                  const next = isSelected
-                                    ? data.callbackDays.filter((item) => item !== day)
-                                    : [...data.callbackDays, day];
-                                  updateField("callbackDays", next);
-                                  validateAndStore("callbackWindow");
-                                }}
-                                className={clsx(
-                                  "min-w-10 rounded-lg border px-3 py-2 text-base font-semibold transition",
-                                  isSelected
-                                    ? "border-white bg-white text-[#2A4961]"
-                                    : "border-white/50 text-white hover:bg-white/10",
-                                )}
-                              >
-                                {day}
-                              </button>
-                            );
-                          })}
-                        </div>
-                      </div>
-
-                      <div className="grid max-w-[360px] grid-cols-2 gap-3">
-                        <div className="w-full">
-                          <p className="mb-1 text-sm font-semibold text-white/90">Von</p>
-                          <ModernTimePicker
-                            id="contact-callbackFrom"
-                            disabled={!data.wantsCallback}
-                            value={data.callbackFrom}
-                            onChange={(nextTime) => {
-                              updateField("callbackFrom", nextTime);
-                              validateAndStore("callbackWindow");
-                            }}
-                          />
-                        </div>
-                        <div className="w-full">
-                          <p className="mb-1 text-sm font-semibold text-white/90">Bis</p>
-                          <ModernTimePicker
-                            id="contact-callbackTo"
-                            disabled={!data.wantsCallback}
-                            value={data.callbackTo}
-                            onChange={(nextTime) => {
-                              updateField("callbackTo", nextTime);
-                              validateAndStore("callbackWindow");
-                            }}
-                          />
-                        </div>
-                      </div>
-                    </div>
-                    {errors.callbackWindow && <p className="mt-1 text-sm text-red-100">Fehler: {errors.callbackWindow}</p>}
-                  </div>
-                </div>
-
-                {step === 3 && (
-                  <>
-                    <div>
-                      <label className="flex items-start gap-2 text-base text-white/90">
-                        <input
-                          id="contact-privacyConsent"
-                          type="checkbox"
-                          checked={data.privacyConsent}
-                          onChange={(e) => updateField("privacyConsent", e.target.checked)}
-                          className="mt-1"
-                        />
-                        <span>
-                          Ich stimme zu, dass meine Angaben zur Bearbeitung meiner Anfrage verarbeitet werden. Details
-                          finde ich in der{" "}
-                          <Link href="/datenschutz" className="underline underline-offset-2">
-                            Datenschutzerklärung
-                          </Link>
-                          .
-                        </span>
-                      </label>
-                      {errors.privacyConsent && (
-                        <p id="contact-privacyConsent-error" className="mt-1 text-sm text-red-100">
-                          Fehler: {errors.privacyConsent}
-                        </p>
+                      aria-invalid={Boolean(errors.description)}
+                      className={clsx(
+                        CONTACT_TEXTAREA_FIELD_CLASS,
+                        errors.description &&
+                          "border-red-500 ring-1 ring-red-500/40 focus:border-red-500",
                       )}
-                    </div>
-
-                    {submitError && (
-                      <p role="alert" className="rounded-lg border border-red-200 bg-red-50 p-3 text-sm text-red-900">
-                        {submitError}
-                      </p>
-                    )}
-                  </>
-                )}
+                    />
+                    <FieldMessage
+                      id="contact-description-error"
+                      hint={remainingChars <= 100 ? `Noch ${remainingChars} Zeichen` : undefined}
+                      message={errors.description}
+                    />
                   </div>
                 </div>
 
-                <input
-                  type="text"
-                  name="website"
-                  autoComplete="off"
-                  tabIndex={-1}
-                  value={data.hpWebsite}
-                  onChange={(e) => updateField("hpWebsite", e.target.value)}
-                  className="hidden"
-                  aria-hidden="true"
-                />
-                <input type="hidden" name="federalState" value={data.federalState} />
+                <div className="mt-1.5 shrink-0 space-y-1.5 border-t border-white/15 pt-1.5 md:mt-2.5 md:space-y-2 md:pt-2.5">
+                  <label className="flex items-start gap-2 text-xs leading-snug text-white/95">
+                    <input
+                      id="contact-privacyConsent"
+                      type="checkbox"
+                      checked={data.privacyConsent}
+                      onChange={(e) => updateField("privacyConsent", e.target.checked)}
+                      className="mt-0.5"
+                    />
+                    <span>
+                      Ich stimme zu, dass meine Angaben zur Bearbeitung meiner Anfrage
+                      verarbeitet werden (siehe{" "}
+                      <Link href="/datenschutz" className="underline underline-offset-2">
+                        Datenschutz
+                      </Link>
+                      ).
+                    </span>
+                  </label>
+                  <FieldMessage message={errors.privacyConsent} />
 
-                <div className="mt-6 flex shrink-0 flex-wrap gap-3 border-t border-white/10 pt-4 max-lg:mt-3 max-lg:pt-3 lg:mt-8 lg:border-0 lg:pt-0">
-                  {step > 1 && (
-                    <button
-                      type="button"
-                      className="cursor-pointer border-white/60 text-base font-semibold text-white underline underline-offset-2"
-                      onClick={() => setStep((prev) => (prev - 1) as Step)}
-                    >
-                      Zurück
-                    </button>
-                  )}
-                  {step < 3 && (
-                    <button
-                      type="button"
-                      className="flex cursor-pointer items-center justify-center gap-2 rounded-full bg-white px-4 py-3 text-base font-bold text-[#2A4961]"
-                      onClick={handleStepNext}
-                    >
-                      Weiter →
-                    </button>
-                  )}
-                  {step === 3 && (
+                  <input
+                    type="text"
+                    name="website"
+                    autoComplete="off"
+                    tabIndex={-1}
+                    value={data.hpWebsite}
+                    onChange={(e) => updateField("hpWebsite", e.target.value)}
+                    className="hidden"
+                    aria-hidden="true"
+                  />
+                  <input type="hidden" name="federalState" value={data.federalState} />
+
+                  <div className="flex flex-wrap items-center gap-3">
                     <button
                       type="submit"
-                      disabled={isSubmitting}
-                      className="flex cursor-pointer items-center justify-center gap-2 rounded-full bg-white px-4 py-3 text-base font-bold text-[#2A4961] disabled:cursor-not-allowed disabled:opacity-70"
+                      disabled={isPending}
+                      className={BTN_PRIMARY_SUBMIT}
                     >
-                      {isSubmitting && (
+                      {isPending && (
                         <span
                           className="h-4 w-4 animate-spin rounded-full border-2 border-[#2A4961] border-t-transparent"
                           aria-hidden
                         />
                       )}
-                      {isSubmitting ? "Wird gesendet..." : submitLabel}
+                      {isPending ? "Wird gesendet..." : submitLabel}
                     </button>
-                  )}
+                  </div>
                 </div>
               </form>
             )}
           </div>
 
-          <div className="hidden lg:block">
-            <TrustBlock />
-            <div className="mt-5 rounded-xl bg-white/15 p-4 text-sm text-white backdrop-blur-xl">
-              <p className="font-semibold">Direkter Kontakt</p>
-              <a
-                href={`tel:${CONTACT_PHONE_TEL}`}
-                className="mt-2 block underline"
-                onClick={() => pushAnalyticsEvent("call_click", {})}
-              >
-                {CONTACT_PHONE_DISPLAY}
-              </a>
-              <a href={`mailto:${CONTACT_EMAIL}`} className="mt-1 block underline">
-                {CONTACT_EMAIL}
-              </a>
-            </div>
-            <div className="mt-5 rounded-xl bg-white/15 p-4 text-sm text-white backdrop-blur-xl">
-              <p className="font-semibold">Adresse</p>
-              <address className="mt-2 not-italic text-white/95">
-                {CONTACT_ADDRESS_LINES.map((line) => (
-                  <span key={line} className="block">
-                    {line}
-                  </span>
-                ))}
-              </address>
-            </div>
+          <div className="hidden min-h-0 lg:flex">
+            <ContactSidebar />
           </div>
         </div>
       </div>
