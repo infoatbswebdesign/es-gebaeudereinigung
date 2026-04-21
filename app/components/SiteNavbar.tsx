@@ -89,6 +89,13 @@ function isNearDocumentBottom(scrollY: number): boolean {
   return scrollY >= maxScroll - 40;
 }
 
+/**
+ * Logo-Morph ueber `scale` statt `height`: der intrinsische `h-[40px]`-Slot
+ * bleibt stabil, wir skalieren ihn nur fuer die visuelle Groesse. Das vermeidet
+ * Layout-Thrashing (Forced Reflow), weil sich die intrinsische Groesse nicht
+ * aendert – transformationen laufen ausschliesslich auf dem Compositor.
+ * Das Logo ist quadratisch; `scale` skaliert X und Y uniform.
+ */
 function applyMorphLayout(
   logoEl: HTMLElement,
   menuEl: HTMLElement,
@@ -100,13 +107,14 @@ function applyMorphLayout(
 
   const logoHeightStart = md ? LOGO_START_HEIGHT_MD_PX : LOGO_START_HEIGHT_PX;
   const logoHeight = LOGO_H_END_PX + (logoHeightStart - LOGO_H_END_PX) * inv;
+  const logoScale = logoHeight / LOGO_H_END_PX;
   const logoYStart = (md ? LOGO_START_TOP_MD_PX : LOGO_START_TOP_PX) - LOGO_TOP_END_PX;
   const menuYStart = (md ? MENU_START_TOP_MD_PX : MENU_START_TOP_PX) - MENU_TOP_END_PX;
 
   gsap.set(logoEl, {
     y: logoYStart * inv,
-    height: logoHeight,
-    scale: 1,
+    scaleX: logoScale,
+    scaleY: logoScale,
     transformOrigin: "left top",
   });
   gsap.set(menuEl, { y: menuYStart * inv });
@@ -428,11 +436,12 @@ export default function SiteNavbar() {
           const md = isDesktop();
           const logoHeightStart = md ? LOGO_START_HEIGHT_MD_PX : LOGO_START_HEIGHT_PX;
           const logoHeight = LOGO_H_END_PX + (logoHeightStart - LOGO_H_END_PX) * inv;
+          const logoScale = logoHeight / LOGO_H_END_PX;
           const logoYStart = (md ? LOGO_START_TOP_MD_PX : LOGO_START_TOP_PX) - LOGO_TOP_END_PX;
           gsap.set(logoLink, {
             y: logoYStart * inv,
-            height: logoHeight,
-            scale: 1,
+            scaleX: logoScale,
+            scaleY: logoScale,
             transformOrigin: "left top",
           });
         } else {
@@ -497,8 +506,8 @@ export default function SiteNavbar() {
             src={LOGO_WHITE_SRC}
             alt="ES Gebäudereinigung"
             priority
-            placeholder="blur"
-            sizes="(max-width: 768px) 85vw, 390px"
+            fetchPriority="high"
+            sizes="176px"
             className="block h-full w-auto max-w-[min(85vw,390px)] object-contain object-left"
             draggable={false}
           />
@@ -564,7 +573,9 @@ export default function SiteNavbar() {
           }`}
         />
 
-        <aside
+        {/* role="dialog" auf <div>, weil <aside> nach "ARIA in HTML" keine
+            dialog-Rolle zulaesst (Lighthouse/axe melden das sonst). */}
+        <div
           id="site-menu-panel"
           role="dialog"
           aria-modal={menuOpen}
@@ -629,7 +640,7 @@ export default function SiteNavbar() {
               <div className="flex flex-col gap-3">
                 <a
                   href={`tel:${CONTACT_PHONE_TEL}`}
-                  className="inline-flex items-center gap-2 text-base leading-tight font-normal text-white/90 transition-opacity hover:opacity-80"
+                  className="inline-flex items-center gap-2 text-lg leading-tight font-semibold text-white transition-opacity hover:opacity-80"
                 >
                   <svg viewBox="0 0 24 24" aria-hidden className="h-5 w-5 shrink-0" fill="none">
                     <rect x="7.2" y="2.6" width="9.6" height="18.8" rx="2.3" stroke="currentColor" strokeWidth="1.7" />
@@ -641,7 +652,7 @@ export default function SiteNavbar() {
 
                 <a
                   href={`mailto:${CONTACT_EMAIL}`}
-                  className="inline-flex items-center gap-2 text-base leading-tight font-normal text-white/90 transition-opacity hover:opacity-80"
+                  className="inline-flex items-center gap-2 text-lg leading-tight font-semibold text-white transition-opacity hover:opacity-80"
                 >
                   <svg viewBox="0 0 24 24" aria-hidden className="h-5 w-5 shrink-0" fill="none">
                     <rect x="3.2" y="5.5" width="17.6" height="13" rx="2.2" stroke="currentColor" strokeWidth="1.7" />
@@ -672,7 +683,7 @@ export default function SiteNavbar() {
               </a>
             </div>
           </div>
-        </aside>
+        </div>
       </div>
     </>
   );

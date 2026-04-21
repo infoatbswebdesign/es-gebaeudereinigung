@@ -11,6 +11,18 @@ import SiteNavbar from "./SiteNavbar";
 
 gsap.registerPlugin(ScrollTrigger, ScrollSmoother, useGSAP);
 
+/**
+ * Global: ScrollTrigger darf bei iOS-Adressleisten-Resize (virtual keyboard,
+ * 100svh-Sprung) NICHT automatisch refreshen – das triggert ansonsten Wellen
+ * an Layout-Reads (Forced Reflow, Lighthouse-Warnung ~490 ms).
+ * `limitCallbacks` buendelt Trigger-Callbacks auf einen pro Frame, was die
+ * Haeufigkeit teurer `onUpdate`-Ketten reduziert.
+ */
+ScrollTrigger.config({
+  ignoreMobileResize: true,
+  limitCallbacks: true,
+});
+
 type Props = {
   children: React.ReactNode;
 };

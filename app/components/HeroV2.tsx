@@ -9,6 +9,12 @@ import { heroPosterFirstFrame } from "@/app/assets/images";
 
 const HERO_VIDEO_MP4_SRC = "/es-gebaeudereinigung-hero-section-video.mp4";
 const HERO_POSTER_SRC = heroPosterFirstFrame;
+// Natives Poster-Attribut des <video>-Elements: derselbe Frame 0, aber als
+// direkter Pfad (Video-Pipeline rendert ihn, nicht die Next/Image-CSS-Pipeline).
+// Dadurch liegt der sichtbare Hero-Hintergrund bereits beim ersten Paint im
+// Video-Element, und der Wechsel zum Video-Stream passiert intern im Browser
+// ohne Overlay-Ghosting zwischen zwei Rendering-Pipelines.
+const HERO_VIDEO_POSTER_SRC = "/es-gebaeudereinigung-hero-section-first-frame.jpg";
 
 /**
  * Server Hero-Markup; minimale Browser-Video-Logik in HeroV2VideoController.
@@ -28,6 +34,7 @@ export default function HeroV2() {
           fill
           sizes="100vw"
           priority
+          fetchPriority="high"
           placeholder="blur"
           aria-hidden
           className="absolute inset-0 z-0 h-full w-full object-cover"
@@ -38,16 +45,24 @@ export default function HeroV2() {
           readyClassName="hero-v2-video--ready"
           reducedMotionClassName="hero-v2--reduced-motion"
         />
+        {/* Kein CSS-Fade zwischen Poster (<Image>) und Video: auf grossen
+            Retina-Viewports rendern <img> und <video> denselben Frame sub-
+            pixelweise leicht unterschiedlich, was bei einem Fade als Flicker
+            sichtbar wurde. Das Video bekommt stattdessen sein natives
+            poster-Attribut und ist von Beginn an voll opak. Der Browser
+            rendert Poster und Video-Stream dadurch mit derselben Video-
+            Pipeline und wechselt intern ohne sichtbare Ueberlagerung.
+            Next/Image liegt weiter darunter und dient als Fallback
+            (prefers-reduced-motion / Video-Ladephase). */}
         <video
           id="hero-v2-video"
           aria-hidden
-          autoPlay
-          className="absolute inset-0 z-10 h-full w-full object-cover opacity-0 transition-opacity duration-700"
+          poster={HERO_VIDEO_POSTER_SRC}
+          className="absolute inset-0 z-10 h-full w-full object-cover"
           loop
           muted
-          poster={HERO_POSTER_SRC.src}
           playsInline
-          preload="metadata"
+          preload="none"
         >
           <source src={HERO_VIDEO_MP4_SRC} type="video/mp4" />
           Ihr Browser unterstützt die Wiedergabe des Videos nicht.
