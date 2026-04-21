@@ -50,7 +50,7 @@ type ServiceContent = {
 const SERVICES: ServiceContent[] = [
   {
     id: "kehrwochen",
-    title: "Kehrwochen",
+    title: "Kehr\u00ADwochen",
     shortTitle: "Kehrwochen",
     imageSrc: kehrwochen,
     imageAlt: "Treppenhausreinigung im Rahmen der Kehrwoche",
@@ -68,7 +68,7 @@ const SERVICES: ServiceContent[] = [
   },
   {
     id: "hausmeisterservice",
-    title: "Hausmeisterservice",
+    title: "Hausmeister\u00ADservice",
     shortTitle: "Hausmeister",
     imageSrc: gebaeudeservice,
     imageAlt: "Hausmeister bei Kontrollgang am Objekt",
@@ -86,7 +86,7 @@ const SERVICES: ServiceContent[] = [
   },
   {
     id: "winterdienst",
-    title: "Winterdienst",
+    title: "Winter\u00ADdienst",
     shortTitle: "Winterdienst",
     imageSrc: winterdienst,
     imageAlt: "Winterdienst räumt Gehweg",
@@ -103,7 +103,7 @@ const SERVICES: ServiceContent[] = [
   },
   {
     id: "unterhaltsreinigung",
-    title: "Unterhaltsreinigung",
+    title: "Unterhalts\u00ADreinigung",
     shortTitle: "Unterhaltsreinigung",
     imageSrc: unterhaltsreinigung,
     imageAlt: "Mitarbeiterin nach abgeschlossener Reinigung",
@@ -121,7 +121,7 @@ const SERVICES: ServiceContent[] = [
   },
   {
     id: "praxis-buero-reinigung",
-    title: "Praxis- & Büroreinigung",
+    title: "Praxis- & Büro\u00ADreinigung",
     shortTitle: "Praxis & Büro",
     imageSrc: reinigungsservice,
     imageAlt: "Hygienische Reinigung sensibler Bereiche",
@@ -139,7 +139,7 @@ const SERVICES: ServiceContent[] = [
   },
   {
     id: "grundreinigung",
-    title: "Grundreinigung",
+    title: "Grund\u00ADreinigung",
     shortTitle: "Grundreinigung",
     imageSrc: grundreinigung,
     imageAlt: "Planung einer Grundreinigung",
@@ -157,7 +157,7 @@ const SERVICES: ServiceContent[] = [
   },
   {
     id: "glasreinigung",
-    title: "Glasreinigung",
+    title: "Glas\u00ADreinigung",
     shortTitle: "Glasreinigung",
     imageSrc: glasreinigung,
     imageAlt: "Vorbereitung der Glasreinigung",
@@ -175,7 +175,7 @@ const SERVICES: ServiceContent[] = [
   },
   {
     id: "baugrobreinigung",
-    title: "Baugrobreinigung",
+    title: "Bau\u00ADgrob\u00ADreinigung",
     shortTitle: "Baugrob",
     imageSrc: baugrobreinigung,
     imageAlt: "Reinigung nach Bauarbeiten",
@@ -193,7 +193,7 @@ const SERVICES: ServiceContent[] = [
   },
   {
     id: "gruenanlagenflaechen",
-    title: "Grünanlagenflächen",
+    title: "Grün\u00ADanlagen\u00ADflächen",
     shortTitle: "Grünanlagen",
     imageSrc: gruenanlageflaechen,
     imageAlt: "Pflege von Außenanlagen",
@@ -211,7 +211,7 @@ const SERVICES: ServiceContent[] = [
   },
   {
     id: "entruempelung",
-    title: "Entrümpelung",
+    title: "Ent\u00ADrümpelung",
     shortTitle: "Entrümpelung",
     imageSrc: entruempelung,
     imageAlt: "Entrümpelung und Entsorgung",

@@ -38,7 +38,7 @@ const optionalPhone = z.preprocess(
   z
     .string()
     .max(30, "Telefonnummer ist zu lang.")
-    .regex(/^[+()\-.\s0-9]{6,25}$/u, "Bitte geben Sie eine gueltige Telefonnummer an.")
+    .regex(/^[+()\-.\s0-9]{6,25}$/u, "Bitte geben Sie eine gültige Telefonnummer an.")
     .optional(),
 );
 
@@ -61,15 +61,15 @@ export const contactSchema = z
       .max(80, "Nachname ist zu lang."),
     company: optionalTrimmedString(120),
     email: z
-      .string({ message: "Bitte geben Sie eine gueltige E-Mail-Adresse an." })
+      .string({ message: "Bitte geben Sie eine gültige E-Mail-Adresse an." })
       .trim()
       .toLowerCase()
-      .email("Bitte geben Sie eine gueltige E-Mail-Adresse an."),
+      .email("Bitte geben Sie eine gültige E-Mail-Adresse an."),
     phone: optionalPhone,
     postalCode: z
       .string({ message: "Bitte geben Sie die Postleitzahl an." })
       .trim()
-      .regex(/^\d{5}$/u, "Bitte geben Sie eine gueltige 5-stellige Postleitzahl an."),
+      .regex(/^\d{5}$/u, "Bitte geben Sie eine gültige 5-stellige Postleitzahl an."),
     city: z
       .string({ message: "Bitte geben Sie den Ort an." })
       .trim()
@@ -84,13 +84,13 @@ export const contactSchema = z
       },
       z
         .array(z.enum(SERVICE_OPTIONS, { message: "Unbekannte Leistung." }))
-        .min(1, "Bitte waehlen Sie mindestens eine Leistung aus."),
+        .min(1, "Bitte wählen Sie mindestens eine Leistung aus."),
     ),
     description: z
       .string({ message: "Bitte beschreiben Sie kurz das Objekt." })
       .trim()
       .min(10, "Bitte beschreiben Sie das Objekt mit mindestens 10 Zeichen.")
-      .max(1500, "Bitte kuerzen Sie die Beschreibung auf 1500 Zeichen."),
+      .max(1500, "Bitte kürzen Sie die Beschreibung auf 1500 Zeichen."),
     privacyConsent: z.preprocess(
       (value) => value === true || value === "on" || value === "true",
       z.literal(true, { message: "Bitte stimmen Sie der Verarbeitung Ihrer Angaben zu." }),

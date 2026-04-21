@@ -33,7 +33,7 @@ type ServiceModalContent = {
 const SERVICE_MODAL_CONTENT: ServiceModalContent[] = [
   {
     id: "praxis-buero",
-    title: "Praxis & Büroreinigung",
+    title: "Praxis & Büro\u00ADreinigung",
     imageSrc: PRAXIS_BUERO_IMAGE,
     imageAlt: "Hygienische Reinigung in einer Praxis in Esslingen",
     description:
@@ -46,7 +46,7 @@ const SERVICE_MODAL_CONTENT: ServiceModalContent[] = [
   },
   {
     id: "winterdienst",
-    title: "Winterdienst",
+    title: "Winter\u00ADdienst",
     imageSrc: WINTERDIENST_IMAGE,
     imageAlt: "Winterdienst räumt Gehweg in Esslingen",
     description:

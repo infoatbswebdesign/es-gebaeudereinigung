@@ -171,7 +171,7 @@ export async function sendContact(_prev: ContactState, formData: FormData): Prom
 
   // Honeypot getriggert: leise erfolgreich antworten, NICHT senden.
   if (parsed.data.website) {
-    return { ok: true, ticketId: buildTicketId(), message: "Danke fuer Ihre Anfrage." };
+    return { ok: true, ticketId: buildTicketId(), message: "Danke für Ihre Anfrage." };
   }
 
   const ticketId = buildTicketId();
@@ -195,7 +195,7 @@ export async function sendContact(_prev: ContactState, formData: FormData): Prom
       ok: false,
       values: pickValuesForEcho(formData),
       message:
-        "Versand fehlgeschlagen. Bitte versuchen Sie es spaeter erneut oder rufen Sie uns an.",
+        "Versand fehlgeschlagen. Bitte versuchen Sie es später erneut oder rufen Sie uns an.",
     };
   }
 }

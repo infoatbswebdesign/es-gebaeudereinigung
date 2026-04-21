@@ -129,18 +129,61 @@ const FIELD_ORDER: FieldName[] = [
  * Alle 10 Leistungen mit zugeordnetem Bild.
  * Die Bilder sind die aktuell vorhandenen Assets aus /public –
  * fuer einzelne Eintraege koennten spaeter passendere Motive ergaenzt werden.
+ *
+ * `value` ist der technische Wert, der an den Server geht (Zod-Enum in
+ * lib/contact-schema.ts) und in der Email landet. NIE veraendern.
+ * `label` enthaelt weiche Trennstriche (U+00AD) an den Kompositum-Fugen.
+ * Diese Zeichen sind unsichtbar, solange das Wort in die Zeile passt – muss
+ * der Browser doch umbrechen, trennt er garantiert an der deutschen
+ * Morphem-Grenze (z. B. "Hausmeister-service" statt "Hausmeisterse-rvice").
  */
-const SERVICE_OPTIONS: Array<{ value: string; image: StaticImageData }> = [
-  { value: "Kehrwochen", image: kehrwochen },
-  { value: "Hausmeisterservice", image: gebaeudeservice },
-  { value: "Winterdienst", image: winterdienst },
-  { value: "Unterhaltsreinigung", image: unterhaltsreinigung },
-  { value: "Praxis- & Büroreinigung", image: reinigungsservice },
-  { value: "Grundreinigung", image: grundreinigung },
-  { value: "Glasreinigung", image: glasreinigung },
-  { value: "Baugrobreinigung", image: baugrobreinigung },
-  { value: "Grünanlagenflächen", image: gruenanlageflaechen },
-  { value: "Entrümpelung", image: entruempelung },
+const SERVICE_OPTIONS: Array<{
+  value: string;
+  label: string;
+  image: StaticImageData;
+}> = [
+  { value: "Kehrwochen", label: "Kehr\u00ADwochen", image: kehrwochen },
+  {
+    value: "Hausmeisterservice",
+    label: "Hausmeister\u00ADservice",
+    image: gebaeudeservice,
+  },
+  { value: "Winterdienst", label: "Winter\u00ADdienst", image: winterdienst },
+  {
+    value: "Unterhaltsreinigung",
+    label: "Unterhalts\u00ADreinigung",
+    image: unterhaltsreinigung,
+  },
+  {
+    value: "Praxis- & Büroreinigung",
+    label: "Praxis- & Büro\u00ADreinigung",
+    image: reinigungsservice,
+  },
+  {
+    value: "Grundreinigung",
+    label: "Grund\u00ADreinigung",
+    image: grundreinigung,
+  },
+  {
+    value: "Glasreinigung",
+    label: "Glas\u00ADreinigung",
+    image: glasreinigung,
+  },
+  {
+    value: "Baugrobreinigung",
+    label: "Bau\u00ADgrob\u00ADreinigung",
+    image: baugrobreinigung,
+  },
+  {
+    value: "Grünanlagenflächen",
+    label: "Grün\u00ADanlagen\u00ADflächen",
+    image: gruenanlageflaechen,
+  },
+  {
+    value: "Entrümpelung",
+    label: "Ent\u00ADrümpelung",
+    image: entruempelung,
+  },
 ];
 
 function clsx(...classes: Array<string | false | undefined>) {
@@ -163,7 +206,7 @@ function validateField(data: FormDataState, field: FieldName): string {
     case "services":
       return data.services.length > 0
         ? ""
-        : "Bitte waehlen Sie mindestens eine Leistung aus.";
+        : "Bitte wählen Sie mindestens eine Leistung aus.";
     case "postalCode":
       return data.postalCode.trim() && data.city.trim()
         ? ""
@@ -181,13 +224,13 @@ function validateField(data: FormDataState, field: FieldName): string {
       const isValid = /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
       return isValid
         ? ""
-        : "Bitte geben Sie eine gueltige E-Mail-Adresse an (z. B. name@unternehmen.de).";
+        : "Bitte geben Sie eine gültige E-Mail-Adresse an (z. B. name@unternehmen.de).";
     }
     case "phone":
       if (!data.phone.trim()) return "";
       return /^[+()\-.\s0-9]{6,25}$/.test(data.phone.trim())
         ? ""
-        : "Bitte geben Sie eine gueltige Telefonnummer an.";
+        : "Bitte geben Sie eine gültige Telefonnummer an.";
     case "description": {
       const value = data.description.trim();
       if (value.length === 0) {
@@ -298,13 +341,13 @@ function fieldClass(hasError?: boolean) {
 function ContactSidebar() {
   const TRUST_POINTS = [
     "Kostenloses, transparentes Angebot",
-    "Persoenliche Besichtigung vor Ort",
+    "Persönliche Besichtigung vor Ort",
     "Feste Teams – keine Subunternehmer",
-    "Ueber 200 betreute Objekte in der Region",
+    "Über 200 betreute Objekte in der Region",
   ];
 
   const PROCESS_STEPS = [
-    { title: "Anfrage senden", text: "In 2 Minuten ausgefuellt." },
+    { title: "Anfrage senden", text: "In 2 Minuten ausgefüllt." },
     { title: "Wir besichtigen", text: "Termin nach Ihrem Kalender." },
     { title: "Faires Angebot", text: "Schriftlich und unverbindlich." },
   ];
@@ -318,11 +361,11 @@ function ContactSidebar() {
             Kurze Antwortzeit
           </span>
           <h3 className="mt-3 text-xl font-bold leading-tight">
-            Persoenlich. Unverbindlich. Aus Esslingen.
+            Persönlich. Unverbindlich. Aus Esslingen.
           </h3>
           <p className="mt-1.5 text-sm leading-relaxed text-white/85">
             Schreiben Sie uns Ihr Anliegen – wir melden uns mit einem
-            transparenten Angebot zurueck. Kein Aussendienst, keine Vertrags&shy;tricks.
+            transparenten Angebot zurück. Kein Außendienst, keine Vertrags&shy;tricks.
           </p>
         </div>
 
@@ -496,7 +539,7 @@ export default function ContactFormSection() {
       if (e.email?.[0]) serverErrors.email = e.email[0];
       if (e.phone?.[0]) serverErrors.phone = e.phone[0];
       if (e.postalCode?.[0] || e.city?.[0]) {
-        serverErrors.postalCode = e.postalCode?.[0] ?? e.city?.[0] ?? "Bitte PLZ und Ort pruefen.";
+        serverErrors.postalCode = e.postalCode?.[0] ?? e.city?.[0] ?? "Bitte PLZ und Ort prüfen.";
       }
       if (e.services?.[0]) serverErrors.services = e.services[0];
       if (e.description?.[0]) serverErrors.description = e.description[0];
@@ -1054,10 +1097,11 @@ export default function ContactFormSection() {
                                 className="pointer-events-none absolute inset-x-0 bottom-0 h-3/4 bg-linear-to-t from-black/90 via-black/55 to-transparent"
                               />
                               <span
-                                className="pointer-events-none absolute inset-x-1.5 bottom-1.5 text-center text-[11px] font-semibold leading-tight text-white md:inset-x-1.5 md:bottom-1.5 md:text-[11px] lg:text-xs"
+                                lang="de"
+                                className="pointer-events-none absolute inset-x-1.5 bottom-1.5 text-center text-[11px] font-semibold leading-tight text-white hyphens-manual wrap-break-word md:inset-x-1.5 md:bottom-1.5 md:text-[11px] lg:text-xs"
                                 style={{ textShadow: "0 1px 2px rgba(0,0,0,0.55)" }}
                               >
-                                {option.value}
+                                {option.label}
                               </span>
                               {isSelected && (
                                 <span
