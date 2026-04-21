@@ -55,7 +55,7 @@ const WERTE = [
 
 const FAKTEN = [
   { value: "Esslingen", label: "Standort am Neckar" },
-  { value: "Stuttgart", label: "Einsatzgebiet" },
+  { value: "Stuttgart", label: "Einzugsgebiet" },
   { value: "Feste Teams", label: "Keine Subunternehmer" },
   { value: "Inhabergeführt", label: "Persönlich" },
 ];
@@ -181,12 +181,7 @@ export default function UeberUnsPage() {
                 Stuttgart und Esslingen.
               </p>
               <p className="mt-5 max-w-2xl text-base leading-relaxed text-slate-700 md:text-lg">
-                Vom Standort{" "}
-                <span className="font-medium text-slate-900">
-                  {BUSINESS_ADDRESS.streetAddress}, {BUSINESS_ADDRESS.postalCode}{" "}
-                  Esslingen
-                </span>{" "}
-                betreuen wir Büros, Praxen und Gewerbeobjekte: von der{" "}
+                Wir betreuen Büros, Praxen und Gewerbeobjekte: von der{" "}
                 <Link
                   href="/leistungen"
                   className="font-medium text-sky-800 underline decoration-sky-300 underline-offset-4 hover:text-sky-900"
@@ -286,7 +281,7 @@ export default function UeberUnsPage() {
                 id="einsatzgebiet-heading"
                 className="text-2xl font-bold leading-tight text-slate-900 md:text-3xl lg:text-4xl"
               >
-                Einsatzgebiet
+                Einzugsgebiet
               </h2>
               <p className="mt-4 text-base leading-relaxed text-slate-700 md:text-lg">
                 Schnell im Einsatz in{" "}
@@ -311,7 +306,7 @@ export default function UeberUnsPage() {
 
             <div>
               <h3 className="sr-only">
-                Städte und Gemeinden im Einsatzgebiet
+                Städte und Gemeinden im Einzugsgebiet
               </h3>
               <ul className="flex flex-wrap gap-2">
                 {EINSATZGEBIETE.map((ort) => (

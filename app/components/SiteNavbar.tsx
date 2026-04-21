@@ -31,7 +31,7 @@ const NAV_HIDE_EASE = "power2.in";
 const NAV_SHOW_DURATION = 0.55;
 const NAV_SHOW_EASE = "power3.out";
 const NAV_VISIBILITY_STORAGE_KEY = "siteNavbarVisible";
-const INSTAGRAM_URL = "https://www.instagram.com/";
+const INSTAGRAM_URL = "https://www.instagram.com/es_reinigungsservice/";
 
 /** Flache Navbar-Zeile (Hamburger); Logo wird per absolute top/height „reingezogen“. */
 const LOGO_H_END_PX = 40;

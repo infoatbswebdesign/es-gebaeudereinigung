@@ -10,7 +10,7 @@ import {
 } from "@/app/contact";
 import { gebaeudeservice, logoEsGebaeudeservice } from "@/app/assets/images";
 
-const INSTAGRAM_URL = "https://www.instagram.com/";
+const INSTAGRAM_URL = "https://www.instagram.com/es_reinigungsservice/";
 
 const FOOTER_NAV_ITEMS = [
   { href: "/", label: "Startseite" },
