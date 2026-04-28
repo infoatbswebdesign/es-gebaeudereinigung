@@ -2,14 +2,14 @@ import path from "node:path";
 import type { NextConfig } from "next";
 
 /**
- * Kanonischer Host (Punycode/ACE-Form der IDN `es-gebäudeservice.de`).
- * MUSS identisch zu `SITE_URL` aus `lib/seo.ts` sein – wird hier hart
- * dupliziert, weil `next.config.ts` zur Build-Zeit ohne TS-Pfad-Aliasse
- * evaluiert wird.
+ * Kanonischer Host (Doku):
+ *   Punycode  : xn--es-gebudeservice-0nb.de
+ *   IDN/Unicode: es-gebäudeservice.de
  *
- * Wert verifiziert: `new URL("https://es-gebäudeservice.de/").hostname`.
+ * Die kanonische URL fuer Sitemap, Canonical, JSON-LD steht in
+ * `lib/seo.ts` (`SITE_URL`). Apex ↔ www-Redirect erfolgt auf Edge-Ebene
+ * im Vercel-Dashboard (siehe Kommentar weiter unten), nicht hier.
  */
-const CANONICAL_HOST = "xn--es-gebudeservice-0nb.de";
 
 const nextConfig: NextConfig = {
   // Fingerprint-Reduktion: kein "x-powered-by: Next.js"-Header ausliefern.
@@ -37,28 +37,13 @@ const nextConfig: NextConfig = {
       },
     ],
   },
-  /**
-   * Host-Kanonisierung für Google: jede Variante der Domain wird per
-   * 308 (Permanent Redirect) auf den Punycode-Host ohne `www` gelenkt.
-   * Damit verschwinden in der Search Console die Statuswerte
-   *   – „Seite mit Weiterleitung"  und
-   *   – „Alternative Seite mit richtigem kanonischen Tag"
-   * an Stellen, wo sie nur durch fehlende Host-Konsolidierung entstehen.
-   *
-   * Voraussetzung: alle hier genannten Hostnamen sind beim Hoster (Vercel,
-   * IONOS Cloud, Plesk, Apache, …) auf diese Next.js-Instanz gemappt.
-   */
-  async redirects() {
-    return [
-      // www.<punycode> → apex (Punycode)
-      {
-        source: "/:path*",
-        has: [{ type: "host", value: `www.${CANONICAL_HOST}` }],
-        destination: `https://${CANONICAL_HOST}/:path*`,
-        permanent: true,
-      },
-    ];
-  },
+  // Anmerkung zu Host-Kanonisierung:
+  // Apex ↔ www-Redirect wird bewusst NICHT auf Application-Ebene gemacht,
+  // sondern auf Edge-Ebene direkt im Vercel-Domain-Routing
+  // (Project → Settings → Domains → www-Variante → 308 Permanent Redirect).
+  // Doppelte Redirects auf zwei Layern hatten zuvor zu einer Schleife
+  // zwischen Vercel (apex → www) und Next.js (www → apex) gefuehrt –
+  // mit dem Resultat ERR_TOO_MANY_REDIRECTS.
   /**
    * Sicherheits-/SEO-Header. `X-Robots-Tag: index,follow` wirkt zusätzlich
    * zum Meta-Robots-Tag und stellt sicher, dass Bilder/JSON-Routen ohne
