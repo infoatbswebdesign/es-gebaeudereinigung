@@ -14,17 +14,32 @@ import {
 } from "@/app/contact";
 
 /**
- * Produktions-URL der Website. Aus Gründen der internationalen
- * Such-Darstellung bewusst mit deutschem Umlaut. Crawler und Browser
- * konvertieren intern in Punycode (xn--es-gebudeservice-mwb.de).
+ * Produktions-URL der Website (kanonisch in Punycode/ASCII).
+ *
+ * Hintergrund: Die echte Domain ist die IDN `es-gebäudeservice.de`. Damit
+ * Sitemap, robots.txt, Canonical-Tags, OpenGraph, JSON-LD, RSS, Sharing-
+ * Buttons und HTTP-Header in **jedem** Tooling identisch aussehen, wird
+ * hier ausschliesslich die ACE-/Punycode-Form verwendet (RFC 3987 → 3986).
+ * Browser zeigen dem Nutzer trotzdem die schoene Umlaut-Form an.
+ *
+ * NIEMALS direkt mit Umlauten konkatenieren – sonst entstehen IRIs, die
+ * mancher Crawler/Linter als „nicht kanonisch" wertet.
  */
-export const SITE_URL = "https://es-gebäudeservice.de";
+export const SITE_URL = "https://xn--es-gebudeservice-mwb.de";
+
+/**
+ * Menschlich lesbare Form (Unicode/IDN). Wird in JSON-LD als `sameAs`
+ * referenziert und kann optional in UI-Texten angezeigt werden – aber NIE
+ * in technischen URL-Feldern (canonical, sitemap, robots, OG).
+ */
+export const SITE_URL_DISPLAY = "https://es-gebäudeservice.de";
 
 /** Name der Marke. */
 export const SITE_NAME = "ES-Gebäudeservice";
 export const SITE_ALTERNATE_NAME = [
   "ES Gebäudereinigung",
   "ES Gebäudeservice Esslingen",
+  "ES-Gebäudeservice Esslingen",
 ];
 
 /** Standard-Description (Startseite / Fallback). */
@@ -92,6 +107,23 @@ export const DEFAULT_KEYWORDS = [
   "ES-Gebäudeservice",
 ] as const;
 
+/**
+ * Build-Time-Guard: stellt sicher, dass `SITE_URL` ASCII-only ist
+ * (Punycode statt Unicode). Schlaegt frueh fehl, wenn jemand die
+ * Konstante versehentlich auf `https://es-gebäudeservice.de` zurueck-
+ * stellt – das wuerde Sitemap, Canonical und JSON-LD inkonsistent
+ * machen und Google schickt dann „Seite mit Weiterleitung"-Warnungen.
+ */
+if (process.env.NODE_ENV !== "production") {
+  // eslint-disable-next-line no-control-regex
+  if (/[^\u0000-\u007f]/.test(SITE_URL)) {
+    throw new Error(
+      `[seo] SITE_URL muss ASCII/Punycode sein, ist aber: ${SITE_URL}. ` +
+        "Verwende https://xn--es-gebudeservice-mwb.de.",
+    );
+  }
+}
+
 /** Konkatenation einer relativen Pfad-URL mit `SITE_URL`. */
 export function absoluteUrl(path: string = "/"): string {
   if (!path.startsWith("/")) return `${SITE_URL}/${path}`;
@@ -156,6 +188,13 @@ export function organizationJsonLd() {
       "Winterdienst",
       "Hausmeisterservice",
       "Gewerbereinigung",
+    ],
+    sameAs: [
+      // Unicode-/IDN-Form der eigenen Domain. Hilft Google, kanonische
+      // Punycode-URL und „schoene" Umlaut-URL als ein und dieselbe
+      // Entitaet zu verstehen – wichtig zur Abgrenzung von der
+      // gleichnamigen Hamburger Firma „ES Gebäude-Service GmbH".
+      SITE_URL_DISPLAY,
     ],
     slogan: "Professionelle Gebäudereinigung aus Esslingen.",
     foundingLocation: {

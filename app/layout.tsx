@@ -58,8 +58,11 @@ export const metadata: Metadata = {
   alternates: {
     canonical: "/",
     languages: {
+      // Es gibt nur eine Sprachversion (Deutsch). hreflang `de-DE` ist
+      // ausreichend, ein `x-default` darueber hinaus ist ueberfluessig
+      // und widerspricht Googles eigener Hreflang-Doku, wenn keine
+      // weiteren Sprachen existieren.
       "de-DE": "/",
-      "x-default": "/",
     },
   },
   robots: {
@@ -81,6 +84,7 @@ export const metadata: Metadata = {
     siteName: SITE_NAME,
     title: `${SITE_NAME} | Gebäudereinigung Esslingen & Stuttgart`,
     description: SITE_DESCRIPTION,
+    alternateLocale: ["de_AT", "de_CH"],
   },
   twitter: {
     card: "summary_large_image",
