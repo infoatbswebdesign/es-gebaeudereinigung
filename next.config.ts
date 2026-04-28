@@ -6,8 +6,10 @@ import type { NextConfig } from "next";
  * MUSS identisch zu `SITE_URL` aus `lib/seo.ts` sein – wird hier hart
  * dupliziert, weil `next.config.ts` zur Build-Zeit ohne TS-Pfad-Aliasse
  * evaluiert wird.
+ *
+ * Wert verifiziert: `new URL("https://es-gebäudeservice.de/").hostname`.
  */
-const CANONICAL_HOST = "xn--es-gebudeservice-mwb.de";
+const CANONICAL_HOST = "xn--es-gebudeservice-0nb.de";
 
 const nextConfig: NextConfig = {
   // Fingerprint-Reduktion: kein "x-powered-by: Next.js"-Header ausliefern.

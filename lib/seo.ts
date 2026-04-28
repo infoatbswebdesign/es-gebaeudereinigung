@@ -24,8 +24,11 @@ import {
  *
  * NIEMALS direkt mit Umlauten konkatenieren – sonst entstehen IRIs, die
  * mancher Crawler/Linter als „nicht kanonisch" wertet.
+ *
+ * Verifiziert via `new URL("https://es-gebäudeservice.de").hostname` und
+ * deckungsgleich mit der Punycode-Anzeige im GoDaddy-Domain-Dashboard.
  */
-export const SITE_URL = "https://xn--es-gebudeservice-mwb.de";
+export const SITE_URL = "https://xn--es-gebudeservice-0nb.de";
 
 /**
  * Menschlich lesbare Form (Unicode/IDN). Wird in JSON-LD als `sameAs`
@@ -119,7 +122,7 @@ if (process.env.NODE_ENV !== "production") {
   if (/[^\u0000-\u007f]/.test(SITE_URL)) {
     throw new Error(
       `[seo] SITE_URL muss ASCII/Punycode sein, ist aber: ${SITE_URL}. ` +
-        "Verwende https://xn--es-gebudeservice-mwb.de.",
+        "Verwende https://xn--es-gebudeservice-0nb.de.",
     );
   }
 }
